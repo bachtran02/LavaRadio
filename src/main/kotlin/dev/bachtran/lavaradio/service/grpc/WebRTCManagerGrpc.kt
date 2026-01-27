@@ -1,13 +1,17 @@
 package dev.bachtran.lavaradio.service.grpc
+import dev.bachtran.lavaradio.config.WebRTCGrpcConfig
 import io.grpc.ManagedChannelBuilder
-import io.grpc.stub.StreamObserver
 import lavaradio.proto.SessionRequest
 import lavaradio.proto.WebRTCManagerGrpc
+import org.springframework.boot.grpc.server.autoconfigure.GrpcServerProperties
 import org.springframework.stereotype.Service
 
 @Service
-class GrpcWebRTCService {
-    private val channel = ManagedChannelBuilder.forAddress("127.0.0.1", 50051)
+class GrpcWebRTCService(
+    private val grpcServerProperties: GrpcServerProperties,
+    private val webRTCGrpcConfig: WebRTCGrpcConfig
+) {
+    private val channel = ManagedChannelBuilder.forAddress(webRTCGrpcConfig.host, webRTCGrpcConfig.port)
         .usePlaintext()
         .build()
 
@@ -15,8 +19,7 @@ class GrpcWebRTCService {
 
     fun startWebRTCSession() {
         val request = SessionRequest.newBuilder()
-            .setStreamId("whatever-stream-id")
-            .setKotlinProviderAddress("127.0.0.1:9090")
+            .setAudioProviderAddress("${grpcServerProperties.address}:${grpcServerProperties.port}")
             .build()
 
         try {

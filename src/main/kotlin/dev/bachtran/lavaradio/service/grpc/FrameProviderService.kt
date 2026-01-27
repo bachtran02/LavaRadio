@@ -39,9 +39,9 @@ class FrameProviderService(
 
                 if (frame == null) {
                     response.setIsSilence(true)
-                    response.setPcmData(ByteString.EMPTY)
+                    response.setOpusData(ByteString.EMPTY)
                 } else {
-                    response.setPcmData(ByteString.copyFrom(frame.data))
+                    response.setOpusData(ByteString.copyFrom(frame.data))
                     response.setIsSilence(false)
                 }
 
