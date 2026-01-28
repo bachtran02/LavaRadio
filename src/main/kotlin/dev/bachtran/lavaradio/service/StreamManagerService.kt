@@ -7,20 +7,17 @@ import org.springframework.stereotype.Service
 
 @Service
 class StreamManagerService (
-    private val lavaService: LavaPlayerService,
+    private val lavaplayerService: LavaPlayerService,
     private val grpcWebRTCService: GrpcWebRTCService,
-    private val frameProviderService: FrameProviderService,
 ) {
 
     @Synchronized
     fun startStream() {
-
         grpcWebRTCService.startWebRTCSession()
-
-
     }
 
     fun stopStream() {
-        // TODO: Implement logic to handle the end of a stream
+        grpcWebRTCService.stopWebRTCSession()
+        lavaplayerService.stop()
     }
 }
