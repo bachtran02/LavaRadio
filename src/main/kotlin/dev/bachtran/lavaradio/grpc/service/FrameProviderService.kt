@@ -1,7 +1,7 @@
-package dev.bachtran.lavaradio.service.grpc
+package dev.bachtran.lavaradio.grpc.service
 
 import com.google.protobuf.ByteString
-import dev.bachtran.lavaradio.service.lavaplayer.LavaPlayerService
+import dev.bachtran.lavaradio.lavaplayer.service.LavaplayerService
 import io.grpc.stub.ServerCallStreamObserver
 import io.grpc.stub.StreamObserver
 import lavaradio.proto.AudioFrame
@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 
 @Service
 class FrameProviderService(
-    private val lavaService: LavaPlayerService
+    private val lavaService: LavaplayerService
 ) : AudioProviderGrpc.AudioProviderImplBase() {
 
     private val executor = Executors.newSingleThreadScheduledExecutor()

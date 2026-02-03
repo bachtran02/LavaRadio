@@ -1,9 +1,6 @@
-package dev.bachtran.lavaradio.config
+package dev.bachtran.lavaradio.lavaplayer.config
 
 import com.sedmelluq.discord.lavaplayer.format.OpusAudioDataFormat
-import org.springframework.context.annotation.Configuration
-import com.sedmelluq.discord.lavaplayer.format.Pcm16AudioDataFormat
-import com.sedmelluq.discord.lavaplayer.player.AudioConfiguration
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "lavaplayer")

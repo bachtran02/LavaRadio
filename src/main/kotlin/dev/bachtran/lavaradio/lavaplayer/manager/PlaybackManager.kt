@@ -1,15 +1,15 @@
-package dev.bachtran.lavaradio.service.lavaplayer
+package dev.bachtran.lavaradio.lavaplayer.manager
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
-import dev.bachtran.lavaradio.dto.PlaybackStateDTO
-import dev.bachtran.lavaradio.dto.TrackInfoDTO
+import dev.bachtran.lavaradio.common.PlaybackState
+import org.springframework.stereotype.Component
 import java.util.concurrent.LinkedBlockingQueue
-import javax.sound.midi.Track
 
+@Component
 class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
     private val queue = LinkedBlockingQueue<AudioTrack>()
 
@@ -23,18 +23,25 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
         player.startTrack(queue.poll(), false)
     }
 
+    fun togglePause(isPaused: Boolean) {
+        player.isPaused = isPaused
+    }
+
     fun stop() {
         queue.clear()
         player.stopTrack()
     }
 
-    fun togglePause(isPaused: Boolean) {
-        player.isPaused = isPaused
+    fun getPlaybackState(): PlaybackState {
+        return PlaybackState(
+            isPlaying = (player.playingTrack != null),
+            isPaused = player.isPaused,
+            position = player.playingTrack?.position ?: 0L,
+            track = player.playingTrack?.info
+        )
     }
 
-    fun getCurrentTrack(): AudioTrack? = player.playingTrack
-
-    fun getQueue(): List<AudioTrack> = queue.toList()
+    fun getQueue() = queue.map { it.info }.toList()
 
     override fun onTrackStart(player: AudioPlayer?, track: AudioTrack?) {}
 

@@ -1,4 +1,4 @@
-package dev.bachtran.lavaradio.config
+package dev.bachtran.lavaradio.grpc.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 

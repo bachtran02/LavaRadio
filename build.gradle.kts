@@ -41,6 +41,7 @@ dependencies {
 	implementation("dev.lavalink.youtube:v2:1.17.0")
 	implementation("com.github.topi314.lavasrc:lavasrc:4.8.1")
 	implementation("com.github.topi314.lavasrc:lavasrc-protocol:4.8.1")
+	implementation("com.github.topi314.lavasearch:lavasearch:1.0.0")
 
 }
 

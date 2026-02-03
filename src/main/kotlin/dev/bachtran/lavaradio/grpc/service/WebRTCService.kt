@@ -1,5 +1,6 @@
-package dev.bachtran.lavaradio.service.grpc
-import dev.bachtran.lavaradio.config.WebRTCGrpcConfig
+package dev.bachtran.lavaradio.grpc.service
+
+import dev.bachtran.lavaradio.grpc.config.WebRTCGrpcConfig
 import io.grpc.ManagedChannelBuilder
 import lavaradio.proto.StartSessionRequest
 import lavaradio.proto.EndSessionRequest
@@ -8,9 +9,9 @@ import org.springframework.boot.grpc.server.autoconfigure.GrpcServerProperties
 import org.springframework.stereotype.Service
 
 @Service
-class GrpcWebRTCService(
+class WebRTCService(
     private val grpcServerProperties: GrpcServerProperties,
-    private val webRTCGrpcConfig: WebRTCGrpcConfig
+    webRTCGrpcConfig: WebRTCGrpcConfig
 ) {
     private val channel = ManagedChannelBuilder.forAddress(webRTCGrpcConfig.host, webRTCGrpcConfig.port)
         .usePlaintext()
