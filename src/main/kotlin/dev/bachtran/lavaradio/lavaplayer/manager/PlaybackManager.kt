@@ -6,6 +6,7 @@ import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
 import dev.bachtran.lavaradio.common.PlaybackState
+import jakarta.annotation.PostConstruct
 import org.springframework.stereotype.Component
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -13,10 +14,19 @@ import java.util.concurrent.LinkedBlockingQueue
 class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
     private val queue = LinkedBlockingQueue<AudioTrack>()
 
+    @PostConstruct
+    fun setup() {
+        player.addListener(this)
+    }
+
     fun addTrack(track: AudioTrack) {
         if (!player.startTrack(track, true)) {
             queue.offer(track)
         }
+    }
+
+    fun playTrack(track: AudioTrack) {
+        player.startTrack(track, false)
     }
 
     fun playNextTrack() {
@@ -39,6 +49,11 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
             position = player.playingTrack?.position ?: 0L,
             track = player.playingTrack?.info
         )
+    }
+
+    fun removeQueuedTrack(index: Int): Boolean {
+        val track = queue.elementAtOrNull(index) ?: return false
+        return queue.remove(track)
     }
 
     fun getQueue() = queue.map { it.info }.toList()

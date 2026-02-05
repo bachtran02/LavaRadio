@@ -69,9 +69,7 @@ class PlayerManager(private val lavaplayerConfig: LavaplayerConfig) {
         internalManager.configuration.resamplingQuality = AudioConfiguration.ResamplingQuality.MEDIUM
     }
 
-    fun createPlayer(): AudioPlayer {
-        return internalManager.createPlayer()
-    }
+    fun createPlayer(): AudioPlayer = internalManager.createPlayer()
 
     fun loadItem(identifier: String, handler: AudioLoadResultHandler): Future<Void?>? = internalManager.loadItem(identifier, handler)
 

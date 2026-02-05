@@ -13,11 +13,11 @@ import org.springframework.web.bind.annotation.RestController
 class PlayerController(
     private val lavaplayerService: LavaplayerService
 ) {
-    @GetMapping("/search")
-    fun search(@RequestParam query: String, @RequestParam source: String) = lavaplayerService.searchTrack(query, source)
-
     @PostMapping("/add")
-    fun add(@RequestBody url: String) = lavaplayerService.playTrack(url)
+    fun add(@RequestBody url: String) = lavaplayerService.addTrack(url)
+
+    @PostMapping("/play")
+    fun play(@RequestBody url: String) = lavaplayerService.playTrack(url)
 
     @PostMapping("/skip")
     fun skip() = lavaplayerService.skip()
@@ -33,7 +33,4 @@ class PlayerController(
 
     @GetMapping("/playback")
     fun getPlaybackState() = lavaplayerService.getPlaybackState()
-
-    @GetMapping("/queue")
-    fun getQueue() = lavaplayerService.getQueue()
 }
