@@ -34,7 +34,7 @@ class LavaplayerService(
                 playbackManager.addTrack(track)
             }
             override fun playlistLoaded(playlist: AudioPlaylist) {
-                playlist.tracks.forEach { playbackManager.addTrack(it) }
+                playbackManager.addTracks(playlist.tracks)
             }
             override fun noMatches() {
                 throw NoResultsFoundException("No results found for identifier: $identifier")
@@ -68,11 +68,20 @@ class LavaplayerService(
     }
 
     fun pause() = playbackManager.togglePause(true)
+
     fun resume() = playbackManager.togglePause(false)
+
     fun skip() = playbackManager.playNextTrack()
+
     fun stop() = playbackManager.stop()
 
-    fun removeQueuedTrack(index: Int) = playbackManager.removeQueuedTrack(index)
+    fun removeQueuedTrack(index: Int) {
+        playbackManager.removeQueuedTrack(index)
+    }
+
+    fun moveQueuedTrack(trackUri: String, oldIndex: Int, newIndex: Int) {
+        playbackManager.moveQueuedTrack(trackUri, oldIndex, newIndex)
+    }
 
     fun getPlaybackState() = playbackManager.getPlaybackState()
     fun getQueue() = playbackManager.getQueue()
