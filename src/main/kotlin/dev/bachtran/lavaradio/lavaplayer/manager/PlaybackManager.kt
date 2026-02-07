@@ -16,11 +16,13 @@ import java.util.concurrent.LinkedBlockingQueue
 class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
     companion object {
         private const val PLAYBACK_QUEUE_SIZE = 5
+        private const val HISTORY_QUEUE_SIZE = 20
     }
 
     private val lock = Any()
     private val masterQueueList = Collections.synchronizedList<AudioTrack>(ArrayList());
     private val playbackQueue = LinkedBlockingQueue<AudioTrack>(PLAYBACK_QUEUE_SIZE)
+    private val historyQueue = LinkedBlockingQueue<AudioTrack>(HISTORY_QUEUE_SIZE)
 
     @PostConstruct
     fun setup() {
@@ -73,8 +75,12 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
             masterQueueList.clear()
             playbackQueue.clear()
         }
-
+        historyQueue.clear()
         player.stopTrack()
+    }
+
+    fun seek(position: Long) {
+        player.playingTrack?.position = position
     }
 
     fun getPlaybackState(): PlaybackState {
@@ -126,9 +132,19 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
         }
     }
 
+    fun getHistory() : List<AudioTrackInfo> {
+        return historyQueue.toList().map { it.info }
+    }
+
     override fun onTrackStart(player: AudioPlayer?, track: AudioTrack?) {}
 
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
+
+        if (historyQueue.size == HISTORY_QUEUE_SIZE) {
+            historyQueue.poll()
+        }
+        historyQueue.offer(track)
+
         if (endReason.mayStartNext) {
             playNextTrack()
         }

@@ -28,6 +28,9 @@ class PlayerController(
     @PostMapping("/resume")
     fun resume() = lavaplayerService.resume()
 
+    @PostMapping("/seek")
+    fun seek(@RequestBody position: Long) = lavaplayerService.seek(position)
+
     @PostMapping("/stop")
     fun stop() = lavaplayerService.stop()
 

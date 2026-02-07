@@ -75,6 +75,8 @@ class LavaplayerService(
 
     fun stop() = playbackManager.stop()
 
+    fun seek(position: Long) = playbackManager.seek(position)
+
     fun removeQueuedTrack(index: Int) {
         playbackManager.removeQueuedTrack(index)
     }
@@ -84,7 +86,10 @@ class LavaplayerService(
     }
 
     fun getPlaybackState() = playbackManager.getPlaybackState()
+
     fun getQueue() = playbackManager.getQueue()
+
+    fun getHistory() = playbackManager.getHistory()
 
     private fun isUrl(input: String): Boolean {
         val urlRegex = Regex("^(https?|ftp)://[^\\s/$.?#].[^\\s]*\$")

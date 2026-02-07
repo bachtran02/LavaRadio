@@ -19,6 +19,9 @@ class QueueController(
     @GetMapping
     fun getQueue() = lavaplayerService.getQueue()
 
+    @GetMapping("/history")
+    fun getHistory() = lavaplayerService.getHistory()
+
     @DeleteMapping("/{index}")
     fun removeQueuedTrack(@PathVariable index: Int) = lavaplayerService.removeQueuedTrack(index)
 
