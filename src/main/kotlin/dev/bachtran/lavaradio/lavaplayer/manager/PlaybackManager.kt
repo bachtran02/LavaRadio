@@ -6,7 +6,7 @@ import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
-import dev.bachtran.lavaradio.common.PlaybackState
+import dev.bachtran.lavaradio.dto.PlaybackState
 import jakarta.annotation.PostConstruct
 import org.springframework.stereotype.Component
 import java.util.*
@@ -133,7 +133,7 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
     }
 
     fun getHistory() : List<AudioTrackInfo> {
-        return historyQueue.toList().map { it.info }
+        return historyQueue.toList().reversed().map { it.info }
     }
 
     override fun onTrackStart(player: AudioPlayer?, track: AudioTrack?) {}

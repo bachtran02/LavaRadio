@@ -4,8 +4,8 @@ import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
-import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 import com.sedmelluq.discord.lavaplayer.track.playback.AudioFrame
+import dev.bachtran.lavaradio.dto.SearchResultItem
 import dev.bachtran.lavaradio.exception.IdentifierIsNotUrlException
 import dev.bachtran.lavaradio.exception.NoResultsFoundException
 import dev.bachtran.lavaradio.lavaplayer.manager.PlaybackManager
@@ -22,7 +22,9 @@ class LavaplayerService(
 ) {
     fun provideFrame(): AudioFrame? = audioProvider.provide()
 
-    fun searchTrack(query: String, source: String): List<AudioTrackInfo>? = searchManager.search(query, source)
+    fun searchQuery(query: String, source: String, types: String): List<SearchResultItem>? {
+        return searchManager.searchQuery(query, source, types)
+    }
 
     fun addTrack(identifier: String) {
         if (!isUrl(identifier)) {
