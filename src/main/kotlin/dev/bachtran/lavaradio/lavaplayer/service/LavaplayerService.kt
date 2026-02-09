@@ -69,23 +69,25 @@ class LavaplayerService(
         })
     }
 
-    fun pause() = playbackManager.togglePause(true)
+    fun pause() { playbackManager.togglePause(true) }
 
-    fun resume() = playbackManager.togglePause(false)
+    fun resume() { playbackManager.togglePause(false) }
 
-    fun skip() = playbackManager.playNextTrack()
+    fun skip() { playbackManager.playNextTrack() }
 
-    fun stop() = playbackManager.stop()
+    fun stop() { playbackManager.stop() }
 
-    fun seek(position: Long) = playbackManager.seek(position)
+    fun seek(position: Long) { playbackManager.seek(position) }
 
-    fun removeQueuedTrack(index: Int) {
-        playbackManager.removeQueuedTrack(index)
-    }
+    fun removeQueuedTrack(index: Int) { playbackManager.removeQueuedTrack(index) }
 
     fun moveQueuedTrack(trackUri: String, oldIndex: Int, newIndex: Int) {
         playbackManager.moveQueuedTrack(trackUri, oldIndex, newIndex)
     }
+
+    fun setLoop(mode: String) { playbackManager.setLoop(mode) }
+
+    fun shuffleQueue() { playbackManager.shuffleQueue() }
 
     fun getPlaybackState() = playbackManager.getPlaybackState()
 

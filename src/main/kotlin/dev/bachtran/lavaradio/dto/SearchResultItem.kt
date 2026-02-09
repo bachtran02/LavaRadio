@@ -45,7 +45,7 @@ sealed class SearchResultItem {
                     author = item.author ?: "",
                     artworkUrl = item.artworkURL ?: "",
                     uri = item.url ?: "",
-                    numItems = item.tracks.size,
+                    numItems = item.totalTracks ?: 0,
                     playlistType = item.type.toString().lowercase(),
                 )
                 is AudioPlaylist -> SearchResultPlaylist(

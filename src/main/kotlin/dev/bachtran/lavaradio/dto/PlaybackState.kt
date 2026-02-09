@@ -6,5 +6,6 @@ data class PlaybackState(
     val isPlaying: Boolean,
     val isPaused: Boolean,
     val position: Long,
+    val loop: String,
     val track: AudioTrackInfo? = null
 )
