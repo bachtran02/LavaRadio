@@ -6,7 +6,7 @@ import com.github.topi314.lavasrc.spotify.SpotifyAudioPlaylist
 import com.github.topi314.lavasrc.spotify.SpotifySourceManager
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
-import dev.bachtran.lavaradio.dto.SearchResultItem
+import dev.bachtran.lavaradio.dto.rest.SearchResultItem
 import dev.bachtran.lavaradio.exception.NoResultsFoundException
 import dev.bachtran.lavaradio.lavaplayer.config.LavaplayerConfig
 import jakarta.annotation.PostConstruct

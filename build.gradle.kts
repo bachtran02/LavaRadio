@@ -43,6 +43,8 @@ dependencies {
 	implementation("com.github.topi314.lavasrc:lavasrc-protocol:4.8.1")
 	implementation("com.github.topi314.lavasearch:lavasearch:1.0.0")
 
+	implementation("org.springframework.boot:spring-boot-starter-graphql")
+	implementation("org.springframework.boot:spring-boot-starter-websocket")
 }
 
 dependencyManagement {

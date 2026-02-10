@@ -1,0 +1,32 @@
+type Query {
+    getInitialState: PlayerUpdateEvent!
+}
+
+type Subscription {
+    playerUpdates: PlayerUpdateEvent!
+}
+
+type PlayerUpdateEvent {
+    eventType: String!
+    state: PlaybackState
+    queue: [TrackInfo]
+    history: [TrackInfo]
+}
+
+type PlaybackState {
+    isPlaying: Boolean
+    isPaused: Boolean
+    position: Float
+    loop: String
+    track: TrackInfo
+}
+
+type TrackInfo {
+    title: String
+    author: String
+    duration: Float
+    identifier: String
+    isStream: Boolean
+    uri: String
+    artworkUrl: String
+}

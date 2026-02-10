@@ -1,4 +1,4 @@
-package dev.bachtran.lavaradio.dto
+package dev.bachtran.lavaradio.dto.rest
 
 import com.github.topi314.lavasrc.spotify.SpotifyAudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
@@ -18,6 +18,7 @@ sealed class SearchResultItem {
         override val artworkUrl: String,
         override val uri: String,
         val duration: Long,
+        val isStream: Boolean
     ) : SearchResultItem()
 
     data class SearchResultPlaylist(
@@ -39,6 +40,7 @@ sealed class SearchResultItem {
                     artworkUrl = item.info.artworkUrl,
                     uri = item.info.uri,
                     duration = item.info.length,
+                    isStream = item.info.isStream
                 )
                 is SpotifyAudioPlaylist -> SearchResultPlaylist(
                     title = item.name,
