@@ -1,4 +1,4 @@
-package dev.bachtran.lavaradio.dto
+package dev.bachtran.lavaradio.dto.rest
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 

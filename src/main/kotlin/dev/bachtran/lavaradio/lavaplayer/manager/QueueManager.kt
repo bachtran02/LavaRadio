@@ -20,15 +20,24 @@ class QueueManager {
 
     private val historyQueue = LinkedBlockingDeque<AudioTrack>(HISTORY_QUEUE_SIZE)
 
-    fun addTrack(track: AudioTrack) {
-        queue.add(track)
+    fun addTrack(track: AudioTrack, index: Int = -1) {
+        if (index == -1 || index >= queue.size || index < 0) {
+            queue.add(track)
+        } else {
+            queue.add(index, track)
+        }
     }
 
-    fun addTracks(tracks: List<AudioTrack>) {
+    fun addTracks(tracks: List<AudioTrack>, index: Int = -1) {
         if (tracks.isEmpty()) {
             return
         }
-        queue.addAll(tracks)
+
+        if (index == -1 || index >= queue.size || index < 0) {
+            queue.addAll(tracks)
+        } else {
+            queue.addAll(index, tracks)
+        }
     }
 
     fun addTrackHistory(track: AudioTrack) {

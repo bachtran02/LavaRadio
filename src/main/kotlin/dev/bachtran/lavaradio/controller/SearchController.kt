@@ -1,6 +1,6 @@
 package dev.bachtran.lavaradio.controller
 
-import dev.bachtran.lavaradio.dto.SearchResultItem
+import dev.bachtran.lavaradio.dto.rest.SearchResultItem
 import dev.bachtran.lavaradio.lavaplayer.service.LavaplayerService
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping

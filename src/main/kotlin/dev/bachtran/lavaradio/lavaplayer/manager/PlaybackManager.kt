@@ -6,12 +6,12 @@ import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
-import dev.bachtran.lavaradio.dto.PlaybackState
+import dev.bachtran.lavaradio.dto.rest.PlaybackState
 import jakarta.annotation.PostConstruct
 import org.springframework.stereotype.Component
 import kotlin.text.lowercase
 
-enum class LoopMode { TRACK, NONE }
+enum class LoopMode { QUEUE, TRACK, NONE }
 
 @Component
 class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
@@ -22,22 +22,54 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
 
     private var loopMode = LoopMode.NONE
 
+    var onTrackStartHook: (() -> Unit)? = null
+
+    var onTrackEndHook: (() -> Unit)? = null
+
+    var onTrackStuckHook: (() -> Unit)? = null
+
+    var onTrackException: (() -> Unit)? = null
+
     @PostConstruct
     fun setup() {
         player.addListener(this)
     }
 
-    fun addTrack(track: AudioTrack) {
+    // --- Core Playback Commands ---
+
+    fun playTrack(track: AudioTrack) = player.startTrack(track, false)
+
+    fun playNextTrack() = player.startTrack(queueManager.popNextTrack(), false)
+
+    fun togglePause(shouldPause: Boolean) {
+        player.isPaused = shouldPause
+    }
+
+    fun stop() {
+        synchronized(playLock) {
+            queueManager.clearQueue()
+            player.stopTrack()
+            queueManager.clearHistory()
+        }
+    }
+
+    fun seek(position: Long) {
+        player.playingTrack?.position = position
+    }
+
+    // --- Track Loading Logic ---
+
+    fun addTrack(track: AudioTrack, index: Int = -1) {
         synchronized(playLock) {
             if (player.playingTrack == null) {
                 playTrack(track)
             } else {
-                queueManager.addTrack(track)
+                queueManager.addTrack(track, index)
             }
         }
     }
 
-    fun addTracks(tracks: List<AudioTrack>) {
+    fun addTracks(tracks: List<AudioTrack>, index: Int = -1) {
         if (tracks.isEmpty()) return
 
         synchronized(playLock) {
@@ -47,60 +79,46 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
                     queueManager.addTracks(tracks.drop(1))
                 }
             } else {
-                queueManager.addTracks(tracks)
+                /* Player is playing, so there may be tracks before this */
+                queueManager.addTracks(tracks, index)
             }
         }
     }
 
-    fun playTrack(track: AudioTrack) { player.startTrack(track, false) }
-
-    fun playNextTrack() { player.startTrack(queueManager.popNextTrack(), false) }
-
-    fun togglePause(isPaused: Boolean) { player.isPaused = isPaused }
-
-    fun stop() {
-
-        queueManager.clearQueue()
-        player.stopTrack()
-        queueManager.clearHistory()
-    }
-
-    fun seek(position: Long) { player.playingTrack?.position = position }
+    // --- State & Settings ---
 
     fun setLoop(mode: String) {
-        loopMode = when (mode.lowercase()) {
-            "none" -> LoopMode.NONE
-            "track" -> LoopMode.TRACK
-            else -> throw IllegalArgumentException("Invalid loop mode: $mode")
-        }
+        loopMode = LoopMode.valueOf(mode.uppercase())
+        /* TODO: handle error here */
     }
 
-    fun shuffleQueue() { queueManager.shuffleQueue() }
+    fun shuffleQueue() = queueManager.shuffleQueue()
 
-    fun getPlaybackState(): PlaybackState {
-        return PlaybackState(
-            isPlaying = (player.playingTrack != null),
-            isPaused = player.isPaused,
-            position = player.playingTrack?.position ?: 0L,
-            loop = loopMode.name.lowercase(),
-            track = player.playingTrack?.info
-        )
-    }
+    fun getPlaybackState() = PlaybackState(
+        isPlaying = (player.playingTrack != null),
+        isPaused = player.isPaused,
+        position = player.playingTrack?.position ?: 0L,
+        loop = loopMode.name.lowercase(),
+        track = player.playingTrack?.info
+    )
+
+    // --- Queue Delegation ---
+
+    fun getQueue(): List<AudioTrackInfo> = queueManager.getQueue()
+
+    fun getHistory(): List<AudioTrackInfo> = queueManager.getHistory()
 
     fun removeQueuedTrack(index: Int) = queueManager.removeQueuedTrack(index)
 
-    fun moveQueuedTrack(trackUri: String, oldIndex: Int, newIndex: Int): Boolean {
-        return queueManager.moveQueuedTrack(trackUri, oldIndex, newIndex)
+    fun moveQueuedTrack(uri: String, old: Int, new: Int) = queueManager.moveQueuedTrack(uri, old, new)
+
+    // --- Audio Event Listeners ---
+
+    override fun onTrackStart(player: AudioPlayer?, track: AudioTrack?) {
+        onTrackStartHook?.invoke()
     }
 
-    fun getQueue() : List<AudioTrackInfo> = queueManager.getQueue()
-
-    fun getHistory() : List<AudioTrackInfo> = queueManager.getHistory()
-
-    override fun onTrackStart(player: AudioPlayer?, track: AudioTrack?) {}
-
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
-
         queueManager.addTrackHistory(track)
 
         if (endReason.mayStartNext) {
@@ -108,12 +126,20 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
                 player.startTrack(track.makeClone(), false)
                 return
             }
+            if (loopMode == LoopMode.QUEUE) {
+                queueManager.addTrack(track.makeClone())
+            }
             playNextTrack()
         }
+        onTrackEndHook?.invoke()
     }
 
-    override fun onTrackStuck(player: AudioPlayer?, track: AudioTrack?, thresholdMs: Long) { /* TODO: */}
+    override fun onTrackStuck(player: AudioPlayer?, track: AudioTrack?, thresholdMs: Long) {
+        onTrackStuckHook?.invoke()
+    }
 
-    override fun onTrackException(player: AudioPlayer?, track: AudioTrack?, exception: FriendlyException?) { /* TODO: */ }
+    override fun onTrackException(player: AudioPlayer?, track: AudioTrack?, exception: FriendlyException?) {
+        onTrackException?.invoke()
+    }
 
 }
