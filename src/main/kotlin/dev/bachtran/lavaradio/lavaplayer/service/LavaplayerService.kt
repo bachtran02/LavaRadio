@@ -70,13 +70,24 @@ class LavaplayerService(
 
     // --- Track Loading ---
 
-    fun addTrack(identifier: String) {
+    fun addTrack(identifier: String, next: Boolean, shuffle: Boolean) {
         if (!isUrl(identifier)) {
             throw IdentifierIsNotUrlException("Identifier is not a valid URL: $identifier")
         }
         when (val searchResult = playerManager.loadItemSync(identifier)) {
-            is AudioTrack -> playbackManager.addTrack(searchResult)
-            is AudioPlaylist -> playbackManager.addTracks(searchResult.tracks)
+            is AudioTrack -> {
+                if (next) {
+                    playbackManager.addTrack(searchResult, 0)
+                } else {
+                    playbackManager.addTrack(searchResult)
+                }
+            }
+            is AudioPlaylist -> {
+                val tracksToPlay = if (shuffle) searchResult.tracks.shuffled() else searchResult.tracks
+                val insertionIndex = if (next) 0 else -1
+
+                playbackManager.addTracks(tracksToPlay, insertionIndex)
+            }
             else -> throw NoResultsFoundException("Failed to load track: $identifier")
         }
         syncQueueChange(PlaybackUpdateEvent.QUEUE_UPDATED)

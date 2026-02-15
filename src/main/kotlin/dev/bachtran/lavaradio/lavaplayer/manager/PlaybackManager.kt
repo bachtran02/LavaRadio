@@ -11,7 +11,7 @@ import jakarta.annotation.PostConstruct
 import org.springframework.stereotype.Component
 import kotlin.text.lowercase
 
-enum class LoopMode { TRACK, NONE }
+enum class LoopMode { QUEUE, TRACK, NONE }
 
 @Component
 class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
@@ -59,17 +59,17 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
 
     // --- Track Loading Logic ---
 
-    fun addTrack(track: AudioTrack) {
+    fun addTrack(track: AudioTrack, index: Int = -1) {
         synchronized(playLock) {
             if (player.playingTrack == null) {
                 playTrack(track)
             } else {
-                queueManager.addTrack(track)
+                queueManager.addTrack(track, index)
             }
         }
     }
 
-    fun addTracks(tracks: List<AudioTrack>) {
+    fun addTracks(tracks: List<AudioTrack>, index: Int = -1) {
         if (tracks.isEmpty()) return
 
         synchronized(playLock) {
@@ -79,7 +79,8 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
                     queueManager.addTracks(tracks.drop(1))
                 }
             } else {
-                queueManager.addTracks(tracks)
+                /* Player is playing, so there may be tracks before this */
+                queueManager.addTracks(tracks, index)
             }
         }
     }
@@ -124,6 +125,9 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
             if (loopMode == LoopMode.TRACK) {
                 player.startTrack(track.makeClone(), false)
                 return
+            }
+            if (loopMode == LoopMode.QUEUE) {
+                queueManager.addTrack(track.makeClone())
             }
             playNextTrack()
         }
