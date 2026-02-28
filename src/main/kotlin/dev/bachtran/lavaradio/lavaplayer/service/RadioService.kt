@@ -10,20 +10,28 @@ import dev.bachtran.lavaradio.dto.rest.SearchResultItem
 import dev.bachtran.lavaradio.exception.IdentifierIsNotUrlException
 import dev.bachtran.lavaradio.exception.NoResultsFoundException
 import dev.bachtran.lavaradio.lavaplayer.broadcaster.PlaybackBroadcaster
+import dev.bachtran.lavaradio.lavaplayer.config.LavaplayerConfig
 import dev.bachtran.lavaradio.lavaplayer.manager.PlaybackManager
 import dev.bachtran.lavaradio.lavaplayer.manager.PlayerManager
 import dev.bachtran.lavaradio.lavaplayer.manager.SearchManager
 import jakarta.annotation.PostConstruct
+import org.springframework.beans.factory.config.ConfigurableBeanFactory
+import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Service
 
 @Service
-class LavaplayerService(
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+class RadioService(
+    lavaplayerConfig: LavaplayerConfig,
     private val playerManager: PlayerManager,
-    private val playbackManager: PlaybackManager,
-    private val playbackBroadcaster: PlaybackBroadcaster,
-    private val searchManager: SearchManager,
-    private val audioProvider: AudioProvider,
 ) {
+    private val audioPlayer = playerManager.createPlayer()
+
+    private val playbackManager = PlaybackManager(audioPlayer)
+
+    private val playbackBroadcaster = PlaybackBroadcaster()
+
+    private val searchManager = SearchManager(lavaplayerConfig, playerManager)
 
     @PostConstruct
     fun initHooks() {
@@ -41,7 +49,7 @@ class LavaplayerService(
         }
     }
 
-    fun provideFrame(): AudioFrame? = audioProvider.provide()
+    fun provideFrame(): AudioFrame? = audioPlayer.provide()
 
     // --- Playback Updates Stream ---
 
@@ -70,7 +78,7 @@ class LavaplayerService(
 
     // --- Track Loading ---
 
-    fun addTrack(identifier: String, next: Boolean, shuffle: Boolean) {
+    fun addTrack(identifier: String, next: Boolean = false, shuffle: Boolean = false) {
         if (!isUrl(identifier)) {
             throw IdentifierIsNotUrlException("Identifier is not a valid URL: $identifier")
         }

@@ -1,70 +1,89 @@
 package dev.bachtran.lavaradio.grpc.service
 
 import com.google.protobuf.ByteString
-import dev.bachtran.lavaradio.lavaplayer.service.LavaplayerService
+import dev.bachtran.lavaradio.service.StreamManagerService
 import io.grpc.stub.ServerCallStreamObserver
 import io.grpc.stub.StreamObserver
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import lavaradio.proto.AudioFrame
 import lavaradio.proto.AudioProviderGrpc
 import lavaradio.proto.StreamRequest
 import org.springframework.stereotype.Service
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
+import kotlin.coroutines.cancellation.CancellationException
 
 @Service
 class FrameProviderService(
-    private val lavaService: LavaplayerService
+    private val streamManagerService: StreamManagerService,
 ) : AudioProviderGrpc.AudioProviderImplBase() {
 
-    private val executor = Executors.newSingleThreadScheduledExecutor()
-    private var pushAudioTask: ScheduledFuture<*>? = null
-
     override fun pullAudioStream(
-        request: StreamRequest?,
+        request: StreamRequest,
         responseObserver: StreamObserver<AudioFrame?>
     ) {
-        val serverCallObserver = responseObserver as ServerCallStreamObserver
+        val streamScope = CoroutineScope(Dispatchers.Default + Job())
+        val audioBuffer = Channel<AudioFrame>(capacity = 5)
+        val service = streamManagerService.getRadioService(request.streamId) ?: return
 
-        // 1. Define the unit of work
-        val pushNextAudioBuffer = Runnable {
+        streamScope.launch(Dispatchers.IO) {
             try {
-                if (serverCallObserver.isCancelled) {
-                    stopStreaming()
-                    return@Runnable
+                while (true) {
+                    val frame = service.provideFrame()
+                    val response = AudioFrame.newBuilder().apply {
+                        if (frame == null) {
+                            isSilence = true
+                        } else {
+                            opusData = ByteString.copyFrom(frame.data)
+                            isSilence = false
+                        }
+                    }.build()
+
+                    audioBuffer.send(response)
                 }
-
-                val frame = lavaService.provideFrame()
-                val response = AudioFrame.newBuilder()
-
-                if (frame == null) {
-                    response.setIsSilence(true)
-                    response.setOpusData(ByteString.EMPTY)
-                } else {
-                    response.setOpusData(ByteString.copyFrom(frame.data))
-                    response.setIsSilence(false)
-                }
-
-                responseObserver.onNext(response.build())
             } catch (e: Exception) {
-                responseObserver.onError(e)
-                stopStreaming()
+                println("error: ${e.message}")
+                if (e !is CancellationException) {
+                    streamScope.cancel()
+                }
             }
         }
 
-        // Scheduled task every 20ms
-        pushAudioTask = executor.scheduleAtFixedRate(
-            pushNextAudioBuffer, 0, 20, TimeUnit.MILLISECONDS
-        )
+        streamScope.launch {
+            try {
+                var nextTickTime = System.currentTimeMillis()
 
-        // Handle client disconnection cleanup
-        serverCallObserver.setOnCancelHandler {
-            stopStreaming()
+                while (true) {
+                    // Pull the next ready frame from the buffer
+                    val response = audioBuffer.receive()
+
+                    // gRPC observers are NOT thread-safe; sync to be safe
+                    responseObserver.onNext(response)
+
+                    // Strict Timing Logic:
+                    // Instead of delay(20), we calculate the next point in time
+                    // to prevent "drift" where execution time adds up.
+                    nextTickTime += 20
+                    val delayTime = nextTickTime - System.currentTimeMillis()
+
+                    if (delayTime > 0) {
+                        delay(delayTime)
+                    }
+                }
+            } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    responseObserver.onError(e)
+                }
+            }
         }
-    }
 
-    private fun stopStreaming() {
-        pushAudioTask?.cancel(false)
-        println("Streaming stopped and task cancelled.")
+        // Handle client disconnection
+        (responseObserver as ServerCallStreamObserver).setOnCancelHandler {
+            streamScope.cancel()
+        }
     }
 }

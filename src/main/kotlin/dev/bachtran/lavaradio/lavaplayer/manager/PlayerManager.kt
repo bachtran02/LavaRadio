@@ -14,22 +14,22 @@ import com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceM
 import com.sedmelluq.discord.lavaplayer.track.AudioItem
 import dev.bachtran.lavaradio.lavaplayer.config.LavaplayerConfig
 import dev.lavalink.youtube.YoutubeAudioSourceManager
-import dev.lavalink.youtube.clients.AndroidVr
 import dev.lavalink.youtube.clients.AndroidVrWithThumbnail
-import dev.lavalink.youtube.clients.Music
 import dev.lavalink.youtube.clients.MusicWithThumbnail
-import dev.lavalink.youtube.clients.Web
-import dev.lavalink.youtube.clients.WebEmbedded
 import dev.lavalink.youtube.clients.WebEmbeddedWithThumbnail
 import dev.lavalink.youtube.clients.WebWithThumbnail
 import jakarta.annotation.PostConstruct
+import org.springframework.beans.factory.config.ConfigurableBeanFactory
+import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import java.util.concurrent.Future
 import java.util.function.Function
 
 @Component
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 class PlayerManager(private val lavaplayerConfig: LavaplayerConfig) {
-    val internalManager: AudioPlayerManager = DefaultAudioPlayerManager()
+
+    val audioPlayerManager: AudioPlayerManager = DefaultAudioPlayerManager()
 
     /* We need to initialize this before creating beans */
     @PostConstruct
@@ -39,7 +39,7 @@ class PlayerManager(private val lavaplayerConfig: LavaplayerConfig) {
             lavaplayerConfig.sources.spotify.clientSecret,
             lavaplayerConfig.sources.spotify.spDc,
             lavaplayerConfig.sources.spotify.countryCode,
-            Function { internalManager },
+            Function { audioPlayerManager },
             DefaultMirroringAudioTrackResolver(lavaplayerConfig.providers.toTypedArray()),
         )
 
@@ -57,21 +57,21 @@ class PlayerManager(private val lavaplayerConfig: LavaplayerConfig) {
         val soundcloud = SoundCloudAudioSourceManager.createDefault()
 
         /* Register external sources */
-        internalManager.registerSourceManager(youtube)
-        internalManager.registerSourceManager(spotify)
-        internalManager.registerSourceManager(deezer)
-        internalManager.registerSourceManager(soundcloud)
+        audioPlayerManager.registerSourceManager(youtube)
+        audioPlayerManager.registerSourceManager(spotify)
+        audioPlayerManager.registerSourceManager(deezer)
+        audioPlayerManager.registerSourceManager(soundcloud)
 
         /* Register local source */
-        AudioSourceManagers.registerLocalSource(internalManager)
+        AudioSourceManagers.registerLocalSource(audioPlayerManager)
 
-        internalManager.configuration.outputFormat = lavaplayerConfig.getAudioDataFormat()
-        internalManager.configuration.resamplingQuality = AudioConfiguration.ResamplingQuality.MEDIUM
+        audioPlayerManager.configuration.outputFormat = lavaplayerConfig.getAudioDataFormat()
+        audioPlayerManager.configuration.resamplingQuality = AudioConfiguration.ResamplingQuality.MEDIUM
     }
 
-    fun createPlayer(): AudioPlayer = internalManager.createPlayer()
+    fun createPlayer(): AudioPlayer = audioPlayerManager.createPlayer()
 
-    fun loadItem(identifier: String, handler: AudioLoadResultHandler): Future<Void?>? = internalManager.loadItem(identifier, handler)
+    fun loadItem(identifier: String, handler: AudioLoadResultHandler): Future<Void?>? = audioPlayerManager.loadItem(identifier, handler)
 
-    fun loadItemSync(identifier: String): AudioItem? = internalManager.loadItemSync(identifier)
+    fun loadItemSync(identifier: String): AudioItem? = audioPlayerManager.loadItemSync(identifier)
 }

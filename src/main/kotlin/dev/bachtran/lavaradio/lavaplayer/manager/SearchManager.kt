@@ -10,6 +10,8 @@ import dev.bachtran.lavaradio.dto.rest.SearchResultItem
 import dev.bachtran.lavaradio.exception.NoResultsFoundException
 import dev.bachtran.lavaradio.lavaplayer.config.LavaplayerConfig
 import jakarta.annotation.PostConstruct
+import org.springframework.beans.factory.config.ConfigurableBeanFactory
+import org.springframework.context.annotation.Scope
 import org.springframework.core.io.support.ResourcePatternUtils.isUrl
 import org.springframework.stereotype.Component
 
@@ -40,7 +42,7 @@ class SearchManager(
         if (isUrl(query)) {
 
             /* If query is URL then ignore source and types */
-            return when (val searchResult = playerManager.internalManager.loadItemSync(query)) {
+            return when (val searchResult = playerManager.loadItemSync(query)) {
                 is AudioTrack, is SpotifyAudioPlaylist, is AudioPlaylist ->
                     listOf(SearchResultItem.from(searchResult, query))
 

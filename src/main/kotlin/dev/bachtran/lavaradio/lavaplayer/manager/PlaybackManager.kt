@@ -8,12 +8,10 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 import dev.bachtran.lavaradio.dto.rest.PlaybackState
 import jakarta.annotation.PostConstruct
-import org.springframework.stereotype.Component
 import kotlin.text.lowercase
 
 enum class LoopMode { QUEUE, TRACK, NONE }
 
-@Component
 class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
 
     private val queueManager = QueueManager()
