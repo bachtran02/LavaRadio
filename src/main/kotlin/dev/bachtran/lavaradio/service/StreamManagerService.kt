@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import jakarta.annotation.PostConstruct
 
 @Service
 class StreamManagerService (
@@ -19,6 +20,18 @@ class StreamManagerService (
     private val userToStreamMap = ConcurrentHashMap<String, String>()
 
     private val activeSessions = ConcurrentHashMap<String, StreamSession>()
+
+    @PostConstruct
+    fun init() {
+        val guestStreamId = "guest"
+        val guestSession = StreamSession(
+            guestStreamId,
+            "guest",
+            radioProvider.getObject(),
+            webrtcProvider.getObject()
+        )
+        activeSessions[guestStreamId] = guestSession
+    }
 
     fun <T> execute(
         streamId: String,
@@ -40,6 +53,11 @@ class StreamManagerService (
         block: (RadioService) -> T
     ): T {
         return execute(streamId, currentUserId) { session -> block(session.getRadioService()) }
+    }
+
+    fun getStreamState(streamId: String): StreamState {
+        val session = activeSessions[streamId] ?: return StreamState(existed = false, active = false)
+        return StreamState(existed = true, active = session.isActive())
     }
 
     fun createStream(userId: String) : String {
@@ -65,18 +83,15 @@ class StreamManagerService (
         activeSessions[newStreamId] = newSession
         userToStreamMap[userId] = newStreamId
 
-        /* Create stream */
-        newSession.createStream()
-
         return newStreamId
     }
 
-    fun getStreamState(streamId: String): StreamState {
-        val session = activeSessions[streamId]
-        if (session != null) {
-            return StreamState(active = true)
+    fun startStream(streamId: String) {
+        val session = activeSessions[streamId] ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stream not found")
+        if (session.isActive()) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Stream is already active")
         }
-        return StreamState(active = false)
+        session.startStream()
     }
 
     fun getRadioService(streamId: String): RadioService? {

@@ -28,8 +28,7 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
 
     var onTrackException: (() -> Unit)? = null
 
-    @PostConstruct
-    fun setup() {
+    fun addListener() {
         player.addListener(this)
     }
 

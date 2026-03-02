@@ -35,6 +35,7 @@ class RadioService(
 
     @PostConstruct
     fun initHooks() {
+        playbackManager.addListener()
         playbackManager.onTrackStartHook = {
             syncTrackChange(PlaybackUpdateEvent.TRACK_STARTED)
         }

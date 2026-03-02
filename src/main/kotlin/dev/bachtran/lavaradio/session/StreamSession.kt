@@ -9,14 +9,19 @@ class StreamSession (
     private val radioService: RadioService,
     private val grpcWebRTCService: WebRTCService,
 ) {
+    private var isActive: Boolean = false
+
+    fun isActive() = isActive
+
     fun streamId() = streamId
 
     fun userId() = userId
 
     fun getRadioService() = radioService
 
-    fun createStream() {
+    fun startStream() {
         grpcWebRTCService.startWebRTCSession(streamId)
+        isActive = true
     }
 
 //    fun removeStream() {

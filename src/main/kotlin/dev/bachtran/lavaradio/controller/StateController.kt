@@ -14,14 +14,14 @@ class StateController(
 ) {
 
     @QueryMapping
-    fun getInitialState(@Argument("stream_id") streamId: String): PlaybackUpdateEvent {
+    fun getInitialState(@Argument("streamId") streamId: String): PlaybackUpdateEvent {
         return streamManagerService.withRadio(streamId) {
             it.getPlaybackUpdateEvent("INITIAL_LOAD")
         }
     }
 
     @SubscriptionMapping
-    fun playerUpdates(@Argument("stream_id") streamId: String): Flux<PlaybackUpdateEvent> {
+    fun playerUpdates(@Argument("streamId") streamId: String): Flux<PlaybackUpdateEvent> {
         return streamManagerService.withRadio(streamId) {
             it.getPlaybackUpdateStream()
         }

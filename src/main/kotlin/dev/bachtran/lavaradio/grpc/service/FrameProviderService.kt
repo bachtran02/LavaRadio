@@ -7,9 +7,10 @@ import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import lavaradio.proto.AudioFrame
 import lavaradio.proto.AudioProviderGrpc
@@ -26,64 +27,58 @@ class FrameProviderService(
         request: StreamRequest,
         responseObserver: StreamObserver<AudioFrame?>
     ) {
-        val streamScope = CoroutineScope(Dispatchers.Default + Job())
-        val audioBuffer = Channel<AudioFrame>(capacity = 5)
-        val service = streamManagerService.getRadioService(request.streamId) ?: return
+        val service = streamManagerService.getRadioService(request.streamId)
+        if (service == null) {
+            responseObserver.onError(Throwable("Stream not found"))
+            return
+        }
+        val serverObserver = responseObserver as ServerCallStreamObserver<*>
+        val streamJob = Job()
+        val serviceScope = CoroutineScope(Dispatchers.Default + streamJob)
 
-        streamScope.launch(Dispatchers.IO) {
+        /* 5-frame (200ms) buffer */
+        val audioChannel = Channel<AudioFrame>(capacity = 10, onBufferOverflow = BufferOverflow.SUSPEND)
+
+        serverObserver.setOnCancelHandler { streamJob.cancel() }
+
+        // --- PRODUCER: Fetches audio frames from Lavaplayer ---
+        serviceScope.launch(Dispatchers.Default) {
             try {
-                while (true) {
+                while (isActive) {
                     val frame = service.provideFrame()
                     val response = AudioFrame.newBuilder().apply {
-                        if (frame == null) {
-                            isSilence = true
-                        } else {
-                            opusData = ByteString.copyFrom(frame.data)
-                            isSilence = false
-                        }
+                        if (frame == null) isSilence = true
+                        else opusData = ByteString.copyFrom(frame.data)
                     }.build()
-
-                    audioBuffer.send(response)
+                    /* Blocks if buffer is full */
+                    audioChannel.send(response)
+                    delay(20)
                 }
             } catch (e: Exception) {
-                println("error: ${e.message}")
-                if (e !is CancellationException) {
-                    streamScope.cancel()
-                }
+                audioChannel.close(e)
             }
         }
 
-        streamScope.launch {
+        // --- CONSUMER: Sends frames to the Client ---
+        serviceScope.launch(Dispatchers.IO) {
             try {
-                var nextTickTime = System.currentTimeMillis()
-
-                while (true) {
-                    // Pull the next ready frame from the buffer
-                    val response = audioBuffer.receive()
-
-                    // gRPC observers are NOT thread-safe; sync to be safe
-                    responseObserver.onNext(response)
-
-                    // Strict Timing Logic:
-                    // Instead of delay(20), we calculate the next point in time
-                    // to prevent "drift" where execution time adds up.
-                    nextTickTime += 20
-                    val delayTime = nextTickTime - System.currentTimeMillis()
-
-                    if (delayTime > 0) {
-                        delay(delayTime)
+                for (frame in audioChannel) {
+                    while (!serverObserver.isReady && isActive) {
+                        delay(5)
                     }
+                    if (!isActive) {
+                        break
+                    }
+                    responseObserver.onNext(frame)
                 }
+                responseObserver.onCompleted()
             } catch (e: Exception) {
                 if (e !is CancellationException) {
-                    responseObserver.onError(e)
+                    responseObserver.onError(Throwable(e))
                 }
+            } finally {
+                streamJob.cancel()
             }
-        }
-
-        // Handle client disconnection
-        (responseObserver as ServerCallStreamObserver).setOnCancelHandler {
-            streamScope.cancel()
         }
     }
 }
