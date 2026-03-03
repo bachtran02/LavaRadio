@@ -4,81 +4,94 @@ import com.google.protobuf.ByteString
 import dev.bachtran.lavaradio.service.StreamManagerService
 import io.grpc.stub.ServerCallStreamObserver
 import io.grpc.stub.StreamObserver
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import lavaradio.proto.AudioFrame
 import lavaradio.proto.AudioProviderGrpc
 import lavaradio.proto.StreamRequest
 import org.springframework.stereotype.Service
-import kotlin.coroutines.cancellation.CancellationException
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 @Service
 class FrameProviderService(
     private val streamManagerService: StreamManagerService,
 ) : AudioProviderGrpc.AudioProviderImplBase() {
 
+    companion object {
+        private const val MAX_CONCURRENT_STREAMS = 10
+        private const val FRAME_INTERVAL_MS = 20L
+    }
+
+    private val activeStreams = ConcurrentHashMap<String, ScheduledExecutorService>()
+
     override fun pullAudioStream(
         request: StreamRequest,
         responseObserver: StreamObserver<AudioFrame?>
     ) {
-        val service = streamManagerService.getRadioService(request.streamId)
+
+        if (!canAllocateStream()) {
+            responseObserver.onError(Throwable("Maximum stream limit reached"))
+            return
+        }
+
+        val streamId = request.streamId
+        val service = streamManagerService.getRadioService(streamId)
+
         if (service == null) {
             responseObserver.onError(Throwable("Stream not found"))
             return
         }
-        val serverObserver = responseObserver as ServerCallStreamObserver<*>
-        val streamJob = Job()
-        val serviceScope = CoroutineScope(Dispatchers.Default + streamJob)
 
-        /* 5-frame (200ms) buffer */
-        val audioChannel = Channel<AudioFrame>(capacity = 10, onBufferOverflow = BufferOverflow.SUSPEND)
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val serverCallObserver = responseObserver as ServerCallStreamObserver<AudioFrame?>
 
-        serverObserver.setOnCancelHandler { streamJob.cancel() }
+        /* Store executor to map */
+        activeStreams[streamId] = executor
 
-        // --- PRODUCER: Fetches audio frames from Lavaplayer ---
-        serviceScope.launch(Dispatchers.Default) {
+        val pushNextAudioBuffer = Runnable {
             try {
-                while (isActive) {
-                    val frame = service.provideFrame()
-                    val response = AudioFrame.newBuilder().apply {
-                        if (frame == null) isSilence = true
-                        else opusData = ByteString.copyFrom(frame.data)
-                    }.build()
-                    /* Blocks if buffer is full */
-                    audioChannel.send(response)
-                    delay(20)
+                if (serverCallObserver.isCancelled) {
+                    stopStreamInternal(streamId)
+                    return@Runnable
                 }
+
+                val frame = service.provideFrame()
+                val response = AudioFrame.newBuilder().apply {
+                    if (frame == null) {
+                        setIsSilence(true)
+                        setOpusData(ByteString.EMPTY)
+                    } else {
+                        setOpusData(ByteString.copyFrom(frame.data))
+                        setIsSilence(false)
+                    }
+                }.build()
+
+                /* Push frame to gRPC*/
+                responseObserver.onNext(response)
+
             } catch (e: Exception) {
-                audioChannel.close(e)
+                responseObserver.onError(e)
+                stopStreamInternal(streamId)
             }
         }
 
-        // --- CONSUMER: Sends frames to the Client ---
-        serviceScope.launch(Dispatchers.IO) {
-            try {
-                for (frame in audioChannel) {
-                    while (!serverObserver.isReady && isActive) {
-                        delay(5)
-                    }
-                    if (!isActive) {
-                        break
-                    }
-                    responseObserver.onNext(frame)
-                }
-                responseObserver.onCompleted()
-            } catch (e: Exception) {
-                if (e !is CancellationException) {
-                    responseObserver.onError(Throwable(e))
-                }
-            } finally {
-                streamJob.cancel()
-            }
+        executor.scheduleAtFixedRate(
+            pushNextAudioBuffer, 0, FRAME_INTERVAL_MS, TimeUnit.MILLISECONDS
+        )
+
+        serverCallObserver.setOnCancelHandler { stopStreamInternal(streamId) }
+    }
+
+    private fun canAllocateStream(): Boolean {
+        /* TODO: concurrency (right now exceeding 1 stream is fine) */
+        return activeStreams.size < MAX_CONCURRENT_STREAMS
+    }
+
+    private fun stopStreamInternal(streamId: String) {
+        activeStreams.remove(streamId)?.let { executor ->
+            executor.shutdownNow()
+            println("$streamId stream stopped and executor shutdown")
         }
     }
 }
