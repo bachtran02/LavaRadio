@@ -16,11 +16,16 @@ class SecurityConfig {
         http
             .csrf { it.disable() }
             .authorizeHttpRequests { auth ->
-//                auth.requestMatchers("/api/stream/guest", "/api/stream/start/guest").permitAll()
-//                auth.requestMatchers("/api/stream/user", "/api/stream/start/user").authenticated()
+                auth.requestMatchers("/api/stream/create", "/api/auth/current").authenticated()
                 auth.anyRequest().permitAll()
             }
-            .oauth2Login { }
+            .oauth2Login { oauth2 ->
+                oauth2.defaultSuccessUrl("http://127.0.0.1:5173/", true)
+            }
+            .logout { logout ->
+                logout.logoutUrl("/api/auth/logout")
+                logout.logoutSuccessUrl("/").permitAll()
+            }
             .exceptionHandling { it.authenticationEntryPoint(HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)) }
         return http.build()
     }

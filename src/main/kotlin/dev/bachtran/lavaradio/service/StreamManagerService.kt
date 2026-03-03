@@ -56,16 +56,16 @@ class StreamManagerService (
     }
 
     fun getStreamState(streamId: String): StreamState {
-        val session = activeSessions[streamId] ?: return StreamState(existed = false, active = false)
-        return StreamState(existed = true, active = session.isActive())
+        val session = activeSessions[streamId] ?: return StreamState(streamId, existed = false, active = false)
+        return StreamState(streamId, existed = true, active = session.isActive())
     }
 
-    fun createStream(userId: String) : String {
+    fun getOrCreateStream(userId: String) : StreamState {
 
         /* Check if user has active stream */
         val existingStreamId = userToStreamMap[userId]
         if (existingStreamId != null && activeSessions.containsKey(existingStreamId)) {
-            return existingStreamId
+            return StreamState(existingStreamId, existed = true, active = false)
         }
         if (existingStreamId != null) {
             /* remove stale session */
@@ -83,7 +83,7 @@ class StreamManagerService (
         activeSessions[newStreamId] = newSession
         userToStreamMap[userId] = newStreamId
 
-        return newStreamId
+        return StreamState(newStreamId, existed = true, active = false)
     }
 
     fun startStream(streamId: String) {

@@ -28,9 +28,7 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
 
     var onTrackException: (() -> Unit)? = null
 
-    fun addListener() {
-        player.addListener(this)
-    }
+    fun addListener() { player.addListener(this) }
 
     // --- Core Playback Commands ---
 
@@ -51,6 +49,9 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
     }
 
     fun seek(position: Long) {
+        if (player.playingTrack.info.isStream || position < 0 || position > player.playingTrack.duration) {
+            return
+        }
         player.playingTrack?.position = position
     }
 
