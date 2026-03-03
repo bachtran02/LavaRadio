@@ -114,4 +114,8 @@ class SearchManager(
         }
         throw NoResultsFoundException("No results found: $query")
     }
+
+    fun cleanup() {
+        searchManager.shutdown()
+    }
 }

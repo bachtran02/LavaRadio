@@ -163,6 +163,14 @@ class RadioService(
         syncQueueChange(PlaybackUpdateEvent.QUEUE_UPDATED)
     }
 
+    // --- Cleanup ---
+    fun cleanup() {
+        audioPlayer.destroy()
+        playerManager.cleanup()
+        searchManager.cleanup()
+        playbackBroadcaster.cleanup()
+    }
+
     // --- Internal Helpers & Syncing ---
 
     private fun syncPlaybackStateChange(reason: String) {

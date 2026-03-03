@@ -24,7 +24,12 @@ class StreamSession (
         isActive = true
     }
 
-//    fun removeStream() {
-//        grpcWebRTCService.stopWebRTCSession(streamId)
-//    }
+    fun stopStream() {
+        grpcWebRTCService.stopWebRTCSession(streamId)
+        isActive = false
+    }
+
+    fun cleanup() {
+        radioService.cleanup()
+    }
 }

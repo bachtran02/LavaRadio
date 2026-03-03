@@ -5,6 +5,7 @@ import dev.bachtran.lavaradio.service.StreamManagerService
 import dev.bachtran.lavaradio.utils.spotifyId
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -30,5 +31,17 @@ class StreamController(
     @PostMapping("/{streamId}/start")
     fun startUserStream(@PathVariable streamId: String) {
         return streamManagerService.startStream(streamId)
+    }
+
+    /* TODO: oauth endpoint */
+    @PostMapping("/{streamId}/stop")
+    fun stopUserStream(@PathVariable streamId: String) {
+        return streamManagerService.stopStream(streamId)
+    }
+
+    /* TODO: oauth endpoint */
+    @DeleteMapping("/{streamId}")
+    fun removeUserStream(@PathVariable streamId: String) {
+        return streamManagerService.removeStream(streamId)
     }
 }

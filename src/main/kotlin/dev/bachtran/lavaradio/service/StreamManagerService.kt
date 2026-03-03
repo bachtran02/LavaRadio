@@ -15,22 +15,27 @@ import jakarta.annotation.PostConstruct
 @Service
 class StreamManagerService (
     private val radioProvider: ObjectProvider<RadioService>,
+
     private val webrtcProvider: ObjectProvider<WebRTCService>
 ) {
+    companion object {
+        const val GUEST_STREAM_ID = "guest"
+        const val GUEST_STREAM_USER = "guest"
+    }
+
     private val userToStreamMap = ConcurrentHashMap<String, String>()
 
     private val activeSessions = ConcurrentHashMap<String, StreamSession>()
 
     @PostConstruct
     fun init() {
-        val guestStreamId = "guest"
         val guestSession = StreamSession(
-            guestStreamId,
-            "guest",
+            GUEST_STREAM_ID,
+            GUEST_STREAM_USER,
             radioProvider.getObject(),
             webrtcProvider.getObject()
         )
-        activeSessions[guestStreamId] = guestSession
+        activeSessions[GUEST_STREAM_ID] = guestSession
     }
 
     fun <T> execute(
@@ -86,12 +91,30 @@ class StreamManagerService (
         return StreamState(newStreamId, existed = true, active = false)
     }
 
+    fun removeStream(streamId: String) {
+        val session = activeSessions.remove(streamId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stream not found")
+        if (session.isActive()) {
+            /* Stop if stream is active and streaming */
+            session.stopStream()
+        }
+        userToStreamMap.remove(session.userId())
+        session.cleanup()
+    }
+
     fun startStream(streamId: String) {
         val session = activeSessions[streamId] ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stream not found")
         if (session.isActive()) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Stream is already active")
         }
         session.startStream()
+    }
+
+    fun stopStream(streamId: String) {
+        val session = activeSessions[streamId] ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stream not found")
+        if (!session.isActive()) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Stream is not active")
+        }
+        session.stopStream()
     }
 
     fun getRadioService(streamId: String): RadioService? {

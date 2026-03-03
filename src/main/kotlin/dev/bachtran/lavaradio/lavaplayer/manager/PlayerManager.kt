@@ -74,4 +74,9 @@ class PlayerManager(private val lavaplayerConfig: LavaplayerConfig) {
     fun loadItem(identifier: String, handler: AudioLoadResultHandler): Future<Void?>? = audioPlayerManager.loadItem(identifier, handler)
 
     fun loadItemSync(identifier: String): AudioItem? = audioPlayerManager.loadItemSync(identifier)
+
+    fun cleanup() {
+        audioPlayerManager.sourceManagers.forEach { it.shutdown() }
+        audioPlayerManager.shutdown()
+    }
 }

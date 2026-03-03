@@ -34,8 +34,10 @@ class WebRTCService(
         }
     }
 
-    fun stopWebRTCSession() {
-        val request = EndSessionRequest.newBuilder().build()
+    fun stopWebRTCSession(streamId: String) {
+        val request = EndSessionRequest.newBuilder()
+            .setStreamId(streamId)
+            .build()
 
         try {
             val response = stub.stopSession(request)
