@@ -12,6 +12,22 @@ spring:
       allowed-origins: "*"
       allowed-methods: GET,POST
       max-age: 1800s
+  security:
+    oauth2:
+      client:
+        registration:
+          spotify:
+            client-id: ""
+            client-secret: ""
+            authorization-grant-type: authorization_code
+            redirect-uri: "http://127.0.0.1:8080/login/oauth2/code/spotify"
+            client-name: Spotify
+        provider:
+          spotify:
+            authorization-uri: https://accounts.spotify.com/authorize
+            token-uri: https://accounts.spotify.com/api/token
+            user-info-uri: https://api.spotify.com/v1/me
+            user-name-attribute: display_name
 
 server:
   address: 0.0.0.0
