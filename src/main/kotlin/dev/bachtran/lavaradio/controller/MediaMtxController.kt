@@ -16,13 +16,13 @@ class MediaMtxController(
         Endpoint for MediaMtx to call when there is no listener to stop stream.
         This is not exposed to the public.
      */
-    @PostMapping("/start")
-    fun userStreamDemanded(@RequestParam path: String) {
-        println("stream started: $path")
-    }
+//    @PostMapping("/start")
+//    fun userStreamDemanded(@RequestParam id: String) {
+//        println("stream started: streamId=$id")
+//    }
 
     @DeleteMapping("/stop")
-    fun userStreamUndemanded(@RequestParam path: String) {
-        println("stream ended: $path")
+    fun userStreamUndemanded(@RequestParam id: String) {
+        streamManagerService.removeStream(id)
     }
 }

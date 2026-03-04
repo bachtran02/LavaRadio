@@ -35,6 +35,7 @@ class StreamManagerService (
             radioProvider.getObject(),
             webrtcProvider.getObject()
         )
+        userToStreamMap[GUEST_STREAM_USER] = GUEST_STREAM_ID
         activeSessions[GUEST_STREAM_ID] = guestSession
     }
 
@@ -70,10 +71,11 @@ class StreamManagerService (
         /* Check if user has active stream */
         val existingStreamId = userToStreamMap[userId]
         if (existingStreamId != null && activeSessions.containsKey(existingStreamId)) {
+            /* Stream existed */
             return StreamState(existingStreamId, existed = true, active = false)
         }
         if (existingStreamId != null) {
-            /* remove stale session */
+            /* Remove stale session */
             userToStreamMap.remove(userId)
         }
         val newStreamId = generateUniqueId()
@@ -92,12 +94,16 @@ class StreamManagerService (
     }
 
     fun removeStream(streamId: String) {
-        val session = activeSessions.remove(streamId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stream not found")
+        val session = activeSessions[streamId] ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stream not found")
         if (session.isActive()) {
             /* Stop if stream is active and streaming */
             session.stopStream()
         }
-        userToStreamMap.remove(session.userId())
+        if (streamId != GUEST_STREAM_ID) {
+            /* Don't remove guest stream */
+            activeSessions.remove(streamId)
+            userToStreamMap.remove(session.userId())
+        }
         session.cleanup()
     }
 
