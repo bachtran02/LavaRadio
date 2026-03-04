@@ -128,6 +128,10 @@ class StreamManagerService (
         return session.getRadioService()
     }
 
+    fun getActiveSessions(): Map<String, StreamSession> {
+        return activeSessions.toMap()
+    }
+
     private fun generateUniqueId(): String {
         /* Generate 8-digit random ID */
         // NOTE: improve on this later
