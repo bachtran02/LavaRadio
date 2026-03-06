@@ -20,7 +20,7 @@ spring:
             client-id: ""
             client-secret: ""
             authorization-grant-type: authorization_code
-            redirect-uri: "http://127.0.0.1:8080/login/oauth2/code/spotify"
+            redirect-uri: ""
             client-name: Spotify
         provider:
           spotify:
