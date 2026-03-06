@@ -7,7 +7,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 import dev.bachtran.lavaradio.dto.rest.PlaybackState
-import jakarta.annotation.PostConstruct
+import dev.bachtran.lavaradio.exception.InvalidSeekException
 import kotlin.text.lowercase
 
 enum class LoopMode { QUEUE, TRACK, NONE }
@@ -50,7 +50,7 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
 
     fun seek(position: Long) {
         if (player.playingTrack.info.isStream || position < 0 || position > player.playingTrack.duration) {
-            return
+            throw InvalidSeekException(position)
         }
         player.playingTrack?.position = position
     }
@@ -85,10 +85,7 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
 
     // --- State & Settings ---
 
-    fun setLoop(mode: String) {
-        loopMode = LoopMode.valueOf(mode.uppercase())
-        /* TODO: handle error here */
-    }
+    fun setLoop(mode: LoopMode) { loopMode = mode }
 
     fun shuffleQueue() = queueManager.shuffleQueue()
 

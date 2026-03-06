@@ -2,6 +2,8 @@ package dev.bachtran.lavaradio.lavaplayer.manager
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
+import dev.bachtran.lavaradio.exception.InvalidQueueIndexException
+import dev.bachtran.lavaradio.exception.MoveItemUnmatchedException
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
@@ -57,12 +59,12 @@ class QueueManager {
 
         synchronized(queueLock) {
             if (oldIndex < 0 || newIndex < 0 || oldIndex >= queue.size || newIndex >= queue.size) {
-                return false
+                throw InvalidQueueIndexException()
             }
             val trackToMove = queue[oldIndex]
             if (trackToMove.info.uri != trackUri) {
                 /* Sanity check (non-exhaustive) that we are moving the right track */
-                return false
+                throw MoveItemUnmatchedException()
             }
             queue.removeAt(oldIndex)
             queue.add(newIndex, trackToMove)
@@ -75,6 +77,8 @@ class QueueManager {
         synchronized(queueLock) {
             if (index >= 0 && index < queue.size) {
                 queue.removeAt(index)
+            } else {
+                throw InvalidQueueIndexException()
             }
         }
     }
