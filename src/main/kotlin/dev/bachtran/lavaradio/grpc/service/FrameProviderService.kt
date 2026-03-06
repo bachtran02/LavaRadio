@@ -43,6 +43,7 @@ class FrameProviderService(
             return
         }
 
+        val player = service.getAudioPlayer()
         val executor = Executors.newSingleThreadScheduledExecutor()
         val serverCallObserver = responseObserver as ServerCallStreamObserver<AudioFrame?>
 
@@ -56,7 +57,7 @@ class FrameProviderService(
                     return@Runnable
                 }
 
-                val frame = service.provideFrame()
+                val frame = player.provide()
                 val response = AudioFrame.newBuilder().apply {
                     if (frame == null) {
                         setIsSilence(true)

@@ -1,31 +1,44 @@
 package dev.bachtran.lavaradio.service
 
 import dev.bachtran.lavaradio.dto.rest.StreamState
+import dev.bachtran.lavaradio.exception.NoStreamPermissionException
+import dev.bachtran.lavaradio.exception.StreamAlreadyActiveException
+import dev.bachtran.lavaradio.exception.StreamInactiveException
+import dev.bachtran.lavaradio.exception.StreamNotFoundException
 import dev.bachtran.lavaradio.grpc.service.WebRTCService
 import dev.bachtran.lavaradio.lavaplayer.service.RadioService
 import dev.bachtran.lavaradio.session.StreamSession
+import dev.bachtran.lavaradio.session.StreamSessionInfo
 import org.springframework.beans.factory.ObjectProvider
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import jakarta.annotation.PostConstruct
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 @Service
 class StreamManagerService (
+
     private val radioProvider: ObjectProvider<RadioService>,
 
     private val webrtcProvider: ObjectProvider<WebRTCService>
 ) {
     companion object {
         const val GUEST_STREAM_ID = "guest"
+
         const val GUEST_STREAM_USER = "guest"
     }
 
     private val userToStreamMap = ConcurrentHashMap<String, String>()
 
     private val activeSessions = ConcurrentHashMap<String, StreamSession>()
+
+    private val sessionLockMap = ConcurrentHashMap<String, ReentrantLock>()
+
+    private val streamLocks = ConcurrentHashMap<String, ReentrantLock>()
+
+    private val userLocks = ConcurrentHashMap<String, ReentrantLock>()
 
     @PostConstruct
     fun init() {
@@ -44,13 +57,18 @@ class StreamManagerService (
         currentUserId: String? = null,
         action: (StreamSession) -> T
     ): T {
-        val session = activeSessions[streamId]
-            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stream not found")
-
-        if (currentUserId != null && session.userId() != currentUserId) {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, "You do not own this stream")
+        val sessionLock = sessionLockMap.computeIfAbsent(streamId) { ReentrantLock() }
+        return sessionLock.withLock {
+            val session = activeSessions[streamId]
+                ?: throw StreamNotFoundException(streamId)
+            if (!session.isActive()) {
+                throw StreamInactiveException(streamId)
+            }
+            if (currentUserId != null && session.userId() != currentUserId) {
+                throw NoStreamPermissionException(streamId, currentUserId)
+            }
+            action(session)
         }
-        return action(session)
     }
 
     fun <T> withRadio(
@@ -68,59 +86,67 @@ class StreamManagerService (
 
     fun getOrCreateStream(userId: String) : StreamState {
 
-        /* Check if user has active stream */
-        val existingStreamId = userToStreamMap[userId]
-        if (existingStreamId != null && activeSessions.containsKey(existingStreamId)) {
-            /* Stream existed */
-            return StreamState(existingStreamId, existed = true, active = false)
-        }
-        if (existingStreamId != null) {
-            /* Remove stale session */
-            userToStreamMap.remove(userId)
-        }
-        val newStreamId = generateUniqueId()
-        val newSession = StreamSession(
-            newStreamId,
-            userId,
-            radioProvider.getObject(),
-            webrtcProvider.getObject()
-        )
+        val lock = userLocks.computeIfAbsent(userId) { ReentrantLock() }
+        return lock.withLock {
+            /* Check if user has active stream */
+            val existingStreamId = userToStreamMap[userId]
+            if (existingStreamId != null && activeSessions.containsKey(existingStreamId)) {
+                /* Stream existed */
+                return@withLock StreamState(existingStreamId, existed = true, active = false)
+            }
+            if (existingStreamId != null) {
+                /* Remove stale session (ID still exists but no corresponding session */
+                userToStreamMap.remove(userId)
+            }
+            val newStreamId = generateUniqueId()
+            val newSession = StreamSession(
+                newStreamId,
+                userId,
+                radioProvider.getObject(),
+                webrtcProvider.getObject()
+            )
+            /* Update maps */
+            activeSessions[newStreamId] = newSession
+            userToStreamMap[userId] = newStreamId
 
-        /* Update maps */
-        activeSessions[newStreamId] = newSession
-        userToStreamMap[userId] = newStreamId
-
-        return StreamState(newStreamId, existed = true, active = false)
+            StreamState(newStreamId, existed = true, active = false)
+        }
     }
 
     fun removeStream(streamId: String) {
-        val session = activeSessions[streamId] ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stream not found")
-        if (session.isActive()) {
-            /* Stop if stream is active and streaming */
-            session.stopStream()
+        streamLock(streamId).withLock {
+            val session = activeSessions[streamId] ?: throw StreamNotFoundException(streamId)
+            if (session.isActive()) {
+                /* Stop if stream is active and streaming */
+                session.stopStream()
+            }
+            if (streamId != GUEST_STREAM_ID) {
+                /* Don't remove guest stream */
+                activeSessions.remove(streamId)
+                userToStreamMap.remove(session.userId())
+            }
+            session.cleanup()
         }
-        if (streamId != GUEST_STREAM_ID) {
-            /* Don't remove guest stream */
-            activeSessions.remove(streamId)
-            userToStreamMap.remove(session.userId())
-        }
-        session.cleanup()
     }
 
     fun startStream(streamId: String) {
-        val session = activeSessions[streamId] ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stream not found")
-        if (session.isActive()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Stream is already active")
+        streamLock(streamId).withLock {
+            val session = activeSessions[streamId] ?: throw StreamNotFoundException(streamId)
+            if (session.isActive()) {
+                throw StreamAlreadyActiveException(streamId)
+            }
+            session.startStream()
         }
-        session.startStream()
     }
 
     fun stopStream(streamId: String) {
-        val session = activeSessions[streamId] ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stream not found")
-        if (!session.isActive()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Stream is not active")
+        streamLock(streamId).withLock {
+            val session = activeSessions[streamId] ?: throw StreamNotFoundException(streamId)
+            if (!session.isActive()) {
+                throw StreamInactiveException(streamId)
+            }
+            session.stopStream()
         }
-        session.stopStream()
     }
 
     fun getRadioService(streamId: String): RadioService? {
@@ -128,8 +154,10 @@ class StreamManagerService (
         return session.getRadioService()
     }
 
-    fun getActiveSessions(): Map<String, StreamSession> {
-        return activeSessions.toMap()
+    fun getStreamSessionsInfo(includeGuest: Boolean): List<StreamSessionInfo> {
+        return activeSessions.values
+            .filter { includeGuest || it.streamId() != GUEST_STREAM_ID }
+            .map { it.getInfo() }
     }
 
     private fun generateUniqueId(): String {
@@ -140,5 +168,9 @@ class StreamManagerService (
             id = UUID.randomUUID().toString().substring(0, 8)
         } while (activeSessions.containsKey(id))
         return id
+    }
+
+    private fun streamLock(streamId: String): ReentrantLock {
+        return streamLocks.computeIfAbsent(streamId) { ReentrantLock() }
     }
 }

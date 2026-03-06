@@ -2,15 +2,16 @@ package dev.bachtran.lavaradio.lavaplayer.service
 
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
-import com.sedmelluq.discord.lavaplayer.track.playback.AudioFrame
 import dev.bachtran.lavaradio.dto.graphql.PlaybackState
 import dev.bachtran.lavaradio.dto.graphql.PlaybackUpdateEvent
 import dev.bachtran.lavaradio.dto.graphql.TrackInfo
 import dev.bachtran.lavaradio.dto.rest.SearchResultItem
 import dev.bachtran.lavaradio.exception.IdentifierIsNotUrlException
+import dev.bachtran.lavaradio.exception.InvalidLoopModeException
 import dev.bachtran.lavaradio.exception.NoResultsFoundException
 import dev.bachtran.lavaradio.lavaplayer.broadcaster.PlaybackBroadcaster
 import dev.bachtran.lavaradio.lavaplayer.config.LavaplayerConfig
+import dev.bachtran.lavaradio.lavaplayer.manager.LoopMode
 import dev.bachtran.lavaradio.lavaplayer.manager.PlaybackManager
 import dev.bachtran.lavaradio.lavaplayer.manager.PlayerManager
 import dev.bachtran.lavaradio.lavaplayer.manager.SearchManager
@@ -50,7 +51,7 @@ class RadioService(
         }
     }
 
-    fun provideFrame(): AudioFrame? = audioPlayer.provide()
+    fun getAudioPlayer() = audioPlayer
 
     // --- Playback Updates Stream ---
 
@@ -81,7 +82,7 @@ class RadioService(
 
     fun addTrack(identifier: String, next: Boolean = false, shuffle: Boolean = false) {
         if (!isUrl(identifier)) {
-            throw IdentifierIsNotUrlException("Identifier is not a valid URL: $identifier")
+            throw IdentifierIsNotUrlException(identifier)
         }
         when (val searchResult = playerManager.loadItemSync(identifier)) {
             is AudioTrack -> {
@@ -97,7 +98,7 @@ class RadioService(
 
                 playbackManager.addTracks(tracksToPlay, insertionIndex)
             }
-            else -> throw NoResultsFoundException("Failed to load track: $identifier")
+            else -> throw NoResultsFoundException(identifier)
         }
         syncQueueChange(PlaybackUpdateEvent.QUEUE_UPDATED)
     }
@@ -105,12 +106,12 @@ class RadioService(
     fun playTrack(identifier: String) {
 
         if (!isUrl(identifier)) {
-            throw IdentifierIsNotUrlException("Identifier is not a valid URL: $identifier")
+            throw IdentifierIsNotUrlException(identifier)
         }
         when (val searchResult = playerManager.loadItemSync(identifier)) {
             is AudioTrack -> playbackManager.playTrack(searchResult)
             is AudioPlaylist -> playbackManager.playTrack(searchResult.tracks[0])
-            else -> throw NoResultsFoundException("Failed to play track: $identifier")
+            else -> throw NoResultsFoundException(identifier)
         }
     }
 
@@ -144,7 +145,12 @@ class RadioService(
     // --- Queue & Settings Management ---
 
     fun setLoop(mode: String) {
-        playbackManager.setLoop(mode)
+        val loopMode = try {
+            LoopMode.valueOf(mode.uppercase())
+        } catch (e: IllegalArgumentException) {
+            throw InvalidLoopModeException(mode)
+        }
+        playbackManager.setLoop(loopMode)
         syncPlaybackStateChange(PlaybackUpdateEvent.LOOP_MODE_CHANGED)
     }
 

@@ -3,12 +3,25 @@ package dev.bachtran.lavaradio.session
 import dev.bachtran.lavaradio.grpc.service.WebRTCService
 import dev.bachtran.lavaradio.lavaplayer.service.RadioService
 
+data class StreamSessionInfo(
+    val streamId: String,
+    val userId: String,
+    val isActive: Boolean,
+    val lastStopped: Long,
+)
+
 class StreamSession (
+
     private val streamId: String,
+
     private val userId: String,
+
     private val radioService: RadioService,
+
     private val grpcWebRTCService: WebRTCService,
 ) {
+    private var lastStopped = System.currentTimeMillis()
+
     private var isActive: Boolean = false
 
     fun isActive() = isActive
@@ -26,10 +39,20 @@ class StreamSession (
 
     fun stopStream() {
         grpcWebRTCService.stopWebRTCSession(streamId)
+        lastStopped = System.currentTimeMillis()
         isActive = false
     }
 
     fun cleanup() {
         radioService.cleanup()
+    }
+
+    fun getInfo(): StreamSessionInfo {
+        return StreamSessionInfo(
+            streamId = streamId,
+            userId = userId,
+            isActive = isActive,
+            lastStopped = lastStopped
+        )
     }
 }
