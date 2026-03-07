@@ -7,13 +7,11 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 import dev.bachtran.lavaradio.dto.rest.PlaybackState
-import jakarta.annotation.PostConstruct
-import org.springframework.stereotype.Component
+import dev.bachtran.lavaradio.exception.InvalidSeekException
 import kotlin.text.lowercase
 
 enum class LoopMode { QUEUE, TRACK, NONE }
 
-@Component
 class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
 
     private val queueManager = QueueManager()
@@ -30,10 +28,7 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
 
     var onTrackException: (() -> Unit)? = null
 
-    @PostConstruct
-    fun setup() {
-        player.addListener(this)
-    }
+    fun addListener() { player.addListener(this) }
 
     // --- Core Playback Commands ---
 
@@ -54,6 +49,9 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
     }
 
     fun seek(position: Long) {
+        if (player.playingTrack.info.isStream || position < 0 || position > player.playingTrack.duration) {
+            throw InvalidSeekException(position)
+        }
         player.playingTrack?.position = position
     }
 
@@ -87,10 +85,7 @@ class PlaybackManager(private val player: AudioPlayer) : AudioEventAdapter() {
 
     // --- State & Settings ---
 
-    fun setLoop(mode: String) {
-        loopMode = LoopMode.valueOf(mode.uppercase())
-        /* TODO: handle error here */
-    }
+    fun setLoop(mode: LoopMode) { loopMode = mode }
 
     fun shuffleQueue() = queueManager.shuffleQueue()
 

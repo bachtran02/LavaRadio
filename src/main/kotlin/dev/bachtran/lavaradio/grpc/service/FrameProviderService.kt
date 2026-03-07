@@ -1,70 +1,98 @@
 package dev.bachtran.lavaradio.grpc.service
 
 import com.google.protobuf.ByteString
-import dev.bachtran.lavaradio.lavaplayer.service.LavaplayerService
+import dev.bachtran.lavaradio.service.StreamManagerService
 import io.grpc.stub.ServerCallStreamObserver
 import io.grpc.stub.StreamObserver
 import lavaradio.proto.AudioFrame
 import lavaradio.proto.AudioProviderGrpc
 import lavaradio.proto.StreamRequest
 import org.springframework.stereotype.Service
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 @Service
 class FrameProviderService(
-    private val lavaService: LavaplayerService
+    private val streamManagerService: StreamManagerService,
 ) : AudioProviderGrpc.AudioProviderImplBase() {
 
-    private val executor = Executors.newSingleThreadScheduledExecutor()
-    private var pushAudioTask: ScheduledFuture<*>? = null
+    companion object {
+        private const val MAX_CONCURRENT_STREAMS = 10
+        private const val FRAME_INTERVAL_MS = 20L
+    }
+
+    private val activeStreams = ConcurrentHashMap<String, ScheduledExecutorService>()
 
     override fun pullAudioStream(
-        request: StreamRequest?,
+        request: StreamRequest,
         responseObserver: StreamObserver<AudioFrame?>
     ) {
-        val serverCallObserver = responseObserver as ServerCallStreamObserver
 
-        // 1. Define the unit of work
+        if (!canAllocateStream()) {
+            responseObserver.onError(Throwable("Maximum stream limit reached"))
+            return
+        }
+
+        val streamId = request.streamId
+        val service = streamManagerService.getRadioService(streamId)
+
+        if (service == null) {
+            responseObserver.onError(Throwable("Stream not found"))
+            return
+        }
+
+        val player = service.getAudioPlayer()
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val serverCallObserver = responseObserver as ServerCallStreamObserver<AudioFrame?>
+
+        /* Store executor to map */
+        activeStreams[streamId] = executor
+
         val pushNextAudioBuffer = Runnable {
             try {
                 if (serverCallObserver.isCancelled) {
-                    stopStreaming()
+                    stopStreamInternal(streamId)
                     return@Runnable
                 }
 
-                val frame = lavaService.provideFrame()
-                val response = AudioFrame.newBuilder()
+                val frame = player.provide()
+                val response = AudioFrame.newBuilder().apply {
+                    if (frame == null) {
+                        setIsSilence(true)
+                        setOpusData(ByteString.EMPTY)
+                    } else {
+                        setOpusData(ByteString.copyFrom(frame.data))
+                        setIsSilence(false)
+                    }
+                }.build()
 
-                if (frame == null) {
-                    response.setIsSilence(true)
-                    response.setOpusData(ByteString.EMPTY)
-                } else {
-                    response.setOpusData(ByteString.copyFrom(frame.data))
-                    response.setIsSilence(false)
-                }
+                /* Push frame to gRPC*/
+                responseObserver.onNext(response)
 
-                responseObserver.onNext(response.build())
             } catch (e: Exception) {
                 responseObserver.onError(e)
-                stopStreaming()
+                stopStreamInternal(streamId)
             }
         }
 
-        // Scheduled task every 20ms
-        pushAudioTask = executor.scheduleAtFixedRate(
-            pushNextAudioBuffer, 0, 20, TimeUnit.MILLISECONDS
+        executor.scheduleAtFixedRate(
+            pushNextAudioBuffer, 0, FRAME_INTERVAL_MS, TimeUnit.MILLISECONDS
         )
 
-        // Handle client disconnection cleanup
-        serverCallObserver.setOnCancelHandler {
-            stopStreaming()
-        }
+        serverCallObserver.setOnCancelHandler { stopStreamInternal(streamId) }
     }
 
-    private fun stopStreaming() {
-        pushAudioTask?.cancel(false)
-        println("Streaming stopped and task cancelled.")
+    private fun canAllocateStream(): Boolean {
+        /* TODO: concurrency (right now exceeding 1 stream is fine) */
+        return activeStreams.size < MAX_CONCURRENT_STREAMS
+    }
+
+    private fun stopStreamInternal(streamId: String) {
+        activeStreams.remove(streamId)?.let { executor ->
+            executor.shutdownNow()
+            println("$streamId stream stopped and executor shutdown")
+        }
     }
 }

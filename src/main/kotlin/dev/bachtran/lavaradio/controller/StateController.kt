@@ -1,22 +1,29 @@
 package dev.bachtran.lavaradio.controller
 
 import dev.bachtran.lavaradio.dto.graphql.PlaybackUpdateEvent
-import dev.bachtran.lavaradio.lavaplayer.service.LavaplayerService
+import dev.bachtran.lavaradio.service.StreamManagerService
+import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.QueryMapping
 import org.springframework.graphql.data.method.annotation.SubscriptionMapping
 import org.springframework.stereotype.Controller
 import reactor.core.publisher.Flux
 
 @Controller
-class StateController(private val lavaplayerService: LavaplayerService) {
+class StateController(
+    private val streamManagerService: StreamManagerService
+) {
 
     @QueryMapping
-    fun getInitialState(): PlaybackUpdateEvent {
-        return lavaplayerService.getPlaybackUpdateEvent("INITIAL_LOAD")
+    fun getInitialState(@Argument("streamId") streamId: String): PlaybackUpdateEvent {
+        return streamManagerService.withRadio(streamId) {
+            it.getPlaybackUpdateEvent("INITIAL_LOAD")
+        }
     }
 
     @SubscriptionMapping
-    fun playerUpdates(): Flux<PlaybackUpdateEvent> {
-        return lavaplayerService.getPlaybackUpdateStream()
+    fun playerUpdates(@Argument("streamId") streamId: String): Flux<PlaybackUpdateEvent> {
+        return streamManagerService.withRadio(streamId) {
+            it.getPlaybackUpdateStream()
+        }
     }
 }

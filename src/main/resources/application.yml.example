@@ -12,6 +12,22 @@ spring:
       allowed-origins: "*"
       allowed-methods: GET,POST
       max-age: 1800s
+  security:
+    oauth2:
+      client:
+        registration:
+          spotify:
+            client-id: ""
+            client-secret: ""
+            authorization-grant-type: authorization_code
+            redirect-uri: ""
+            client-name: Spotify
+        provider:
+          spotify:
+            authorization-uri: https://accounts.spotify.com/authorize
+            token-uri: https://accounts.spotify.com/api/token
+            user-info-uri: https://api.spotify.com/v1/me
+            user-name-attribute: display_name
 
 server:
   address: 0.0.0.0
@@ -36,3 +52,6 @@ lavaplayer:
 webrtcgrpc:
  host: ${WEBRTC_GRPC_HOST:webrtc-bridge}
  port: ${WEBRTC_GRPC_PORT:50051}
+
+mediamtx:
+ baseApiUrl: "${MEDIA_MTX_API_BASE_URL:http://127.0.0.1:9997/v3}"

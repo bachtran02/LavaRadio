@@ -1,22 +1,47 @@
 package dev.bachtran.lavaradio.controller
 
+import dev.bachtran.lavaradio.dto.rest.StreamState
 import dev.bachtran.lavaradio.service.StreamManagerService
+import dev.bachtran.lavaradio.utils.githubId
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.core.user.OAuth2User
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/api/radio")
+@RequestMapping("/api/stream")
 class StreamController(
     private val streamManagerService: StreamManagerService
 ) {
-    @PostMapping("/start")
-    fun startStream() {
-        streamManagerService.startStream()
+
+    @GetMapping("/{streamId}")
+    fun getUserStreamState(@PathVariable streamId: String): StreamState {
+        return streamManagerService.getStreamState(streamId)
     }
 
-    @PostMapping("/stop")
-    fun stopStream() {
-        streamManagerService.stopStream()
+    @PostMapping("/create")
+    fun getOrCreateUserStream(@AuthenticationPrincipal user: OAuth2User): StreamState {
+         return streamManagerService.getOrCreateStream(user.githubId)
+    }
+
+    @PostMapping("/{streamId}/start")
+    fun startUserStream(@PathVariable streamId: String) {
+        return streamManagerService.startStream(streamId)
+    }
+
+    /* TODO: oauth endpoint */
+    @PostMapping("/{streamId}/stop")
+    fun stopUserStream(@PathVariable streamId: String) {
+        return streamManagerService.stopStream(streamId)
+    }
+
+    /* TODO: oauth endpoint */
+    @DeleteMapping("/{streamId}")
+    fun removeUserStream(@PathVariable streamId: String) {
+        return streamManagerService.removeStream(streamId)
     }
 }

@@ -1,9 +1,9 @@
 type Query {
-    getInitialState: PlayerUpdateEvent!
+    getInitialState(streamId: String!): PlayerUpdateEvent!
 }
 
 type Subscription {
-    playerUpdates: PlayerUpdateEvent!
+    playerUpdates(streamId: String!): PlayerUpdateEvent!
 }
 
 type PlayerUpdateEvent {

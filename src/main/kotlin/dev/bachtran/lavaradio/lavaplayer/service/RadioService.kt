@@ -2,31 +2,41 @@ package dev.bachtran.lavaradio.lavaplayer.service
 
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
-import com.sedmelluq.discord.lavaplayer.track.playback.AudioFrame
 import dev.bachtran.lavaradio.dto.graphql.PlaybackState
 import dev.bachtran.lavaradio.dto.graphql.PlaybackUpdateEvent
 import dev.bachtran.lavaradio.dto.graphql.TrackInfo
 import dev.bachtran.lavaradio.dto.rest.SearchResultItem
 import dev.bachtran.lavaradio.exception.IdentifierIsNotUrlException
+import dev.bachtran.lavaradio.exception.InvalidLoopModeException
 import dev.bachtran.lavaradio.exception.NoResultsFoundException
 import dev.bachtran.lavaradio.lavaplayer.broadcaster.PlaybackBroadcaster
+import dev.bachtran.lavaradio.lavaplayer.config.LavaplayerConfig
+import dev.bachtran.lavaradio.lavaplayer.manager.LoopMode
 import dev.bachtran.lavaradio.lavaplayer.manager.PlaybackManager
 import dev.bachtran.lavaradio.lavaplayer.manager.PlayerManager
 import dev.bachtran.lavaradio.lavaplayer.manager.SearchManager
 import jakarta.annotation.PostConstruct
+import org.springframework.beans.factory.config.ConfigurableBeanFactory
+import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Service
 
 @Service
-class LavaplayerService(
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+class RadioService(
+    lavaplayerConfig: LavaplayerConfig,
     private val playerManager: PlayerManager,
-    private val playbackManager: PlaybackManager,
-    private val playbackBroadcaster: PlaybackBroadcaster,
-    private val searchManager: SearchManager,
-    private val audioProvider: AudioProvider,
 ) {
+    private val audioPlayer = playerManager.createPlayer()
+
+    private val playbackManager = PlaybackManager(audioPlayer)
+
+    private val playbackBroadcaster = PlaybackBroadcaster()
+
+    private val searchManager = SearchManager(lavaplayerConfig, playerManager)
 
     @PostConstruct
     fun initHooks() {
+        playbackManager.addListener()
         playbackManager.onTrackStartHook = {
             syncTrackChange(PlaybackUpdateEvent.TRACK_STARTED)
         }
@@ -41,7 +51,7 @@ class LavaplayerService(
         }
     }
 
-    fun provideFrame(): AudioFrame? = audioProvider.provide()
+    fun getAudioPlayer() = audioPlayer
 
     // --- Playback Updates Stream ---
 
@@ -70,9 +80,9 @@ class LavaplayerService(
 
     // --- Track Loading ---
 
-    fun addTrack(identifier: String, next: Boolean, shuffle: Boolean) {
+    fun addTrack(identifier: String, next: Boolean = false, shuffle: Boolean = false) {
         if (!isUrl(identifier)) {
-            throw IdentifierIsNotUrlException("Identifier is not a valid URL: $identifier")
+            throw IdentifierIsNotUrlException(identifier)
         }
         when (val searchResult = playerManager.loadItemSync(identifier)) {
             is AudioTrack -> {
@@ -88,7 +98,7 @@ class LavaplayerService(
 
                 playbackManager.addTracks(tracksToPlay, insertionIndex)
             }
-            else -> throw NoResultsFoundException("Failed to load track: $identifier")
+            else -> throw NoResultsFoundException(identifier)
         }
         syncQueueChange(PlaybackUpdateEvent.QUEUE_UPDATED)
     }
@@ -96,12 +106,12 @@ class LavaplayerService(
     fun playTrack(identifier: String) {
 
         if (!isUrl(identifier)) {
-            throw IdentifierIsNotUrlException("Identifier is not a valid URL: $identifier")
+            throw IdentifierIsNotUrlException(identifier)
         }
         when (val searchResult = playerManager.loadItemSync(identifier)) {
             is AudioTrack -> playbackManager.playTrack(searchResult)
             is AudioPlaylist -> playbackManager.playTrack(searchResult.tracks[0])
-            else -> throw NoResultsFoundException("Failed to play track: $identifier")
+            else -> throw NoResultsFoundException(identifier)
         }
     }
 
@@ -135,7 +145,12 @@ class LavaplayerService(
     // --- Queue & Settings Management ---
 
     fun setLoop(mode: String) {
-        playbackManager.setLoop(mode)
+        val loopMode = try {
+            LoopMode.valueOf(mode.uppercase())
+        } catch (e: IllegalArgumentException) {
+            throw InvalidLoopModeException(mode)
+        }
+        playbackManager.setLoop(loopMode)
         syncPlaybackStateChange(PlaybackUpdateEvent.LOOP_MODE_CHANGED)
     }
 
@@ -152,6 +167,14 @@ class LavaplayerService(
     fun moveQueuedTrack(trackUri: String, oldIndex: Int, newIndex: Int) {
         playbackManager.moveQueuedTrack(trackUri, oldIndex, newIndex)
         syncQueueChange(PlaybackUpdateEvent.QUEUE_UPDATED)
+    }
+
+    // --- Cleanup ---
+    fun cleanup() {
+        audioPlayer.destroy()
+        playerManager.cleanup()
+        searchManager.cleanup()
+        playbackBroadcaster.cleanup()
     }
 
     // --- Internal Helpers & Syncing ---

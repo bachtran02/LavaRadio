@@ -45,6 +45,8 @@ dependencies {
 
 	implementation("org.springframework.boot:spring-boot-starter-graphql")
 	implementation("org.springframework.boot:spring-boot-starter-websocket")
+	implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
 }
 
 dependencyManagement {

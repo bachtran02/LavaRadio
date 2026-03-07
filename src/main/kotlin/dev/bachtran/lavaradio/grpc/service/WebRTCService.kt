@@ -5,12 +5,13 @@ import io.grpc.ManagedChannelBuilder
 import lavaradio.proto.StartSessionRequest
 import lavaradio.proto.EndSessionRequest
 import lavaradio.proto.WebRTCManagerGrpc
-import org.springframework.boot.grpc.server.autoconfigure.GrpcServerProperties
+import org.springframework.beans.factory.config.ConfigurableBeanFactory
+import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Service
 
 @Service
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 class WebRTCService(
-    private val grpcServerProperties: GrpcServerProperties,
     webRTCGrpcConfig: WebRTCGrpcConfig
 ) {
     private val channel = ManagedChannelBuilder.forAddress(webRTCGrpcConfig.host, webRTCGrpcConfig.port)
@@ -19,9 +20,9 @@ class WebRTCService(
 
     private val stub: WebRTCManagerGrpc.WebRTCManagerBlockingStub = WebRTCManagerGrpc.newBlockingStub(channel)
 
-    fun startWebRTCSession() {
+    fun startWebRTCSession(streamId: String) {
         val request = StartSessionRequest.newBuilder()
-            .setAudioProviderAddress("${grpcServerProperties.address}:${grpcServerProperties.port}")
+            .setStreamId(streamId)
             .build()
 
         try {
@@ -33,8 +34,10 @@ class WebRTCService(
         }
     }
 
-    fun stopWebRTCSession() {
-        val request = EndSessionRequest.newBuilder().build()
+    fun stopWebRTCSession(streamId: String) {
+        val request = EndSessionRequest.newBuilder()
+            .setStreamId(streamId)
+            .build()
 
         try {
             val response = stub.stopSession(request)

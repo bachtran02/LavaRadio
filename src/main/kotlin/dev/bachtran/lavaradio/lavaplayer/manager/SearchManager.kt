@@ -7,6 +7,7 @@ import com.github.topi314.lavasrc.spotify.SpotifySourceManager
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import dev.bachtran.lavaradio.dto.rest.SearchResultItem
+import dev.bachtran.lavaradio.exception.InvalidSourceException
 import dev.bachtran.lavaradio.exception.NoResultsFoundException
 import dev.bachtran.lavaradio.lavaplayer.config.LavaplayerConfig
 import jakarta.annotation.PostConstruct
@@ -40,11 +41,10 @@ class SearchManager(
         if (isUrl(query)) {
 
             /* If query is URL then ignore source and types */
-            return when (val searchResult = playerManager.internalManager.loadItemSync(query)) {
+            return when (val searchResult = playerManager.loadItemSync(query)) {
                 is AudioTrack, is SpotifyAudioPlaylist, is AudioPlaylist ->
                     listOf(SearchResultItem.from(searchResult, query))
-
-                else -> throw NoResultsFoundException("No results found for URL: $query")
+                else -> throw NoResultsFoundException(query)
             }
 
         } else {
@@ -94,7 +94,7 @@ class SearchManager(
                             else -> throw IllegalArgumentException()    /* should never reach here */
                         }
                     } else {
-                        throw NoResultsFoundException("No results found on Spotify for query: $query")
+                        throw NoResultsFoundException(query)
                     }
                 }
                 "youtube", "soundcloud" -> {
@@ -105,11 +105,16 @@ class SearchManager(
                     }
                     return when (val searchResult = playerManager.loadItemSync("$searchPrefix:$query")) {
                         is AudioPlaylist -> searchResult.tracks.map { SearchResultItem.from(it, "") }
-                        else -> throw NoResultsFoundException("No results found on $source for query: $query")
+                        else -> throw NoResultsFoundException(query)
                     }
                 }
+                else -> throw InvalidSourceException(source)
             }
         }
-        throw NoResultsFoundException("No results found: $query")
+        throw NoResultsFoundException(query)
+    }
+
+    fun cleanup() {
+        searchManager.shutdown()
     }
 }

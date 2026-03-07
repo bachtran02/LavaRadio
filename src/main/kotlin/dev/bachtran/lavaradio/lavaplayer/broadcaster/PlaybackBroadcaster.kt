@@ -42,4 +42,8 @@ class PlaybackBroadcaster() : AudioEventAdapter() {
         )
         emit(event)
     }
+
+    fun cleanup() {
+        sink.emitComplete(Sinks.EmitFailureHandler.FAIL_FAST)
+    }
 }
