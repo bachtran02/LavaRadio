@@ -33,8 +33,9 @@ class StreamSession (
     fun getRadioService() = radioService
 
     fun startStream() {
-        grpcWebRTCService.startWebRTCSession(streamId)
-        isActive = true
+        if (grpcWebRTCService.startWebRTCSession(streamId)){
+            isActive = true
+        }
     }
 
     fun stopStream() {

@@ -4,11 +4,9 @@ import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter
 import dev.bachtran.lavaradio.dto.graphql.PlaybackState
 import dev.bachtran.lavaradio.dto.graphql.PlaybackUpdateEvent
 import dev.bachtran.lavaradio.dto.graphql.TrackInfo
-import org.springframework.stereotype.Component
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Sinks
 
-@Component
 class PlaybackBroadcaster() : AudioEventAdapter() {
 
     private val sink = Sinks.many().multicast().directBestEffort<PlaybackUpdateEvent>()

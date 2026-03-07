@@ -4,14 +4,9 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 import dev.bachtran.lavaradio.exception.InvalidQueueIndexException
 import dev.bachtran.lavaradio.exception.MoveItemUnmatchedException
-import org.springframework.beans.factory.config.ConfigurableBeanFactory
-import org.springframework.context.annotation.Scope
-import org.springframework.stereotype.Component
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingDeque
 
-@Component
-@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 class QueueManager {
     companion object {
         private const val HISTORY_QUEUE_SIZE = 20

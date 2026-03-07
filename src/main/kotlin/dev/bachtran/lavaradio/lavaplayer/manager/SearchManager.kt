@@ -10,19 +10,15 @@ import dev.bachtran.lavaradio.dto.rest.SearchResultItem
 import dev.bachtran.lavaradio.exception.InvalidSourceException
 import dev.bachtran.lavaradio.exception.NoResultsFoundException
 import dev.bachtran.lavaradio.lavaplayer.config.LavaplayerConfig
-import jakarta.annotation.PostConstruct
 import org.springframework.core.io.support.ResourcePatternUtils.isUrl
-import org.springframework.stereotype.Component
 
-@Component
 class SearchManager(
-    private val lavaplayerConfig: LavaplayerConfig,
+    lavaplayerConfig: LavaplayerConfig,
     private val playerManager: PlayerManager,
 ) {
     val searchManager: SearchManager = SearchManager()
 
-    @PostConstruct
-    fun setup() {
+    init {
 
         /* Set up Spotify as extra search source */
         val spotify = SpotifySourceManager(

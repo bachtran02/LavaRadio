@@ -8,43 +8,49 @@ import lavaradio.proto.WebRTCManagerGrpc
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Service
+import java.util.logging.Logger
 
 @Service
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 class WebRTCService(
     webRTCGrpcConfig: WebRTCGrpcConfig
 ) {
+    private val logger = Logger.getLogger(WebRTCService::class.java.name)
+
     private val channel = ManagedChannelBuilder.forAddress(webRTCGrpcConfig.host, webRTCGrpcConfig.port)
         .usePlaintext()
         .build()
 
     private val stub: WebRTCManagerGrpc.WebRTCManagerBlockingStub = WebRTCManagerGrpc.newBlockingStub(channel)
 
-    fun startWebRTCSession(streamId: String) {
+    fun startWebRTCSession(streamId: String): Boolean {
         val request = StartSessionRequest.newBuilder()
             .setStreamId(streamId)
             .build()
 
         try {
-            val response = stub.startSession(request)
-            println("Session Accepted: ${response.accepted}")
+            stub.startSession(request)
+            logger.info("Stream \"$streamId\" started successfully.")
+            return true
 
         } catch (e: Exception) {
-            println("RPC failed: ${e.message}")
+            logger.severe("Stream \"$streamId\" failed to start: ${e.message}")
         }
+        return false
     }
 
-    fun stopWebRTCSession(streamId: String) {
+    fun stopWebRTCSession(streamId: String): Boolean {
         val request = EndSessionRequest.newBuilder()
             .setStreamId(streamId)
             .build()
 
         try {
-            val response = stub.stopSession(request)
-            println("Session Ended: ${response.accepted}")
-
+            stub.stopSession(request)
+            logger.info("Stream $streamId ended successfully.")
+            return true
         } catch (e: Exception) {
-            println("RPC failed: ${e.message}")
+            logger.severe("Stream $streamId failed to end: ${e.message}")
         }
+        return false
     }
 }
