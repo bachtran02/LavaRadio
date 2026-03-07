@@ -2,6 +2,7 @@ package dev.bachtran.lavaradio.lavaplayer.manager
 
 import com.github.topi314.lavasearch.SearchManager
 import com.github.topi314.lavasearch.result.AudioSearchResult
+import com.github.topi314.lavasrc.deezer.DeezerAudioPlaylist
 import com.github.topi314.lavasrc.spotify.SpotifyAudioPlaylist
 import com.github.topi314.lavasrc.spotify.SpotifySourceManager
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
@@ -11,11 +12,14 @@ import dev.bachtran.lavaradio.exception.InvalidSourceException
 import dev.bachtran.lavaradio.exception.NoResultsFoundException
 import dev.bachtran.lavaradio.lavaplayer.config.LavaplayerConfig
 import org.springframework.core.io.support.ResourcePatternUtils.isUrl
+import java.util.logging.Logger
 
 class SearchManager(
     lavaplayerConfig: LavaplayerConfig,
     private val playerManager: PlayerManager,
 ) {
+    private val logger = Logger.getLogger(SearchManager::class.java.name)
+
     val searchManager: SearchManager = SearchManager()
 
     init {
@@ -34,11 +38,13 @@ class SearchManager(
 
     fun searchQuery(query: String, source: String, types: String): List<SearchResultItem>? {
 
+        logger.info("Received search request with query: $query, source: $source, types: $types")
+
         if (isUrl(query)) {
 
             /* If query is URL then ignore source and types */
             return when (val searchResult = playerManager.loadItemSync(query)) {
-                is AudioTrack, is SpotifyAudioPlaylist, is AudioPlaylist ->
+                is AudioTrack, is SpotifyAudioPlaylist, is DeezerAudioPlaylist, is AudioPlaylist ->
                     listOf(SearchResultItem.from(searchResult, query))
                 else -> throw NoResultsFoundException(query)
             }

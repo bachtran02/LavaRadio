@@ -1,5 +1,6 @@
 package dev.bachtran.lavaradio.dto.rest
 
+import com.github.topi314.lavasrc.deezer.DeezerAudioPlaylist
 import com.github.topi314.lavasrc.spotify.SpotifyAudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
@@ -42,7 +43,7 @@ sealed class SearchResultItem {
                     duration = item.info.length,
                     isStream = item.info.isStream
                 )
-                is SpotifyAudioPlaylist -> SearchResultPlaylist(
+                is SpotifyAudioPlaylist, is DeezerAudioPlaylist -> SearchResultPlaylist(
                     title = item.name,
                     author = item.author ?: "",
                     artworkUrl = item.artworkURL ?: "",

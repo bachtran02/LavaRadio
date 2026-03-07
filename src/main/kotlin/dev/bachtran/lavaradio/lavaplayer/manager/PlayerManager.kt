@@ -10,6 +10,7 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers
+import com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager
 import com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager
 import com.sedmelluq.discord.lavaplayer.track.AudioItem
 import dev.bachtran.lavaradio.lavaplayer.config.LavaplayerConfig
@@ -56,11 +57,14 @@ class PlayerManager(private val lavaplayerConfig: LavaplayerConfig) {
 
         val soundcloud = SoundCloudAudioSourceManager.createDefault()
 
+        val http = HttpAudioSourceManager()
+
         /* Register external sources */
         audioPlayerManager.registerSourceManager(youtube)
         audioPlayerManager.registerSourceManager(spotify)
         audioPlayerManager.registerSourceManager(deezer)
         audioPlayerManager.registerSourceManager(soundcloud)
+        audioPlayerManager.registerSourceManager(http)
 
         /* Register local source */
         AudioSourceManagers.registerLocalSource(audioPlayerManager)
