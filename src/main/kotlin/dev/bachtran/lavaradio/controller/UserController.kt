@@ -1,7 +1,7 @@
 package dev.bachtran.lavaradio.controller
 
-import dev.bachtran.lavaradio.utils.displayName
-import dev.bachtran.lavaradio.utils.spotifyId
+import dev.bachtran.lavaradio.utils.githubId
+import dev.bachtran.lavaradio.utils.githubName
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.web.bind.annotation.GetMapping
@@ -15,8 +15,8 @@ class UserController {
     @GetMapping("/current")
     fun getAuthUser(@AuthenticationPrincipal user: OAuth2User): Map<String, String> {
         return mapOf(
-            "name" to user.displayName,
-            "id" to user.spotifyId
+            "name" to user.githubName,
+            "id" to user.githubId
         )
     }
 }

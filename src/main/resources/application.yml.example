@@ -52,3 +52,6 @@ lavaplayer:
 webrtcgrpc:
  host: ${WEBRTC_GRPC_HOST:webrtc-bridge}
  port: ${WEBRTC_GRPC_PORT:50051}
+
+mediamtx:
+ baseApiUrl: "${MEDIA_MTX_API_BASE_URL:http://127.0.0.1:9997/v3}"

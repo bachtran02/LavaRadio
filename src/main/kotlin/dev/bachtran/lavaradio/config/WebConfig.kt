@@ -20,7 +20,7 @@ class SecurityConfig {
                 auth.anyRequest().permitAll()
             }
             .oauth2Login { oauth2 ->
-                oauth2.defaultSuccessUrl("http://127.0.0.1:5173/", true)
+                oauth2.defaultSuccessUrl("https://radio.bachtran.dev/", true)
             }
             .logout { logout ->
                 logout.logoutUrl("/api/auth/logout")

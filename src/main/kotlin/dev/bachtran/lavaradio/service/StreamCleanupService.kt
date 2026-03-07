@@ -1,5 +1,6 @@
 package dev.bachtran.lavaradio.service
 
+import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestClient
@@ -19,8 +20,14 @@ data class HlsMuxerItem(
     val bytesSent: Long
 )
 
+@ConfigurationProperties(prefix = "mediamtx")
+data class MediaMtxConfig(
+    val baseApiUrl : String = "http://127.0.0.1:9997/v3"
+)
+
 @Service
 class StreamCleanupService (
+    mediaMtxConfig: MediaMtxConfig,
     private val streamManagerService: StreamManagerService,
     restClientBuilder: RestClient.Builder,
 ) {
@@ -36,7 +43,8 @@ class StreamCleanupService (
 
     private val logger = Logger.getLogger(StreamCleanupService::class.java.name)
 
-    private val mediaMtxClient = restClientBuilder.baseUrl("http://localhost:9997/v3").build()
+    private val mediaMtxClient = restClientBuilder.baseUrl(
+        mediaMtxConfig.baseApiUrl).build()
 
     @Scheduled(fixedRate = STOP_UNDEMANDED_ACTIVE_STREAMS_RATE)
     fun stopUndemandedActiveStreams() {

@@ -2,7 +2,7 @@ package dev.bachtran.lavaradio.controller
 
 import dev.bachtran.lavaradio.dto.rest.StreamState
 import dev.bachtran.lavaradio.service.StreamManagerService
-import dev.bachtran.lavaradio.utils.spotifyId
+import dev.bachtran.lavaradio.utils.githubId
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -25,7 +25,7 @@ class StreamController(
 
     @PostMapping("/create")
     fun getOrCreateUserStream(@AuthenticationPrincipal user: OAuth2User): StreamState {
-         return streamManagerService.getOrCreateStream(user.spotifyId)
+         return streamManagerService.getOrCreateStream(user.githubId)
     }
 
     @PostMapping("/{streamId}/start")
