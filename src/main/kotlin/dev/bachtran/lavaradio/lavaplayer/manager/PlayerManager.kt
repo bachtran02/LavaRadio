@@ -35,14 +35,16 @@ class PlayerManager(private val lavaplayerConfig: LavaplayerConfig) {
     /* We need to initialize this before creating beans */
     @PostConstruct
     fun setup() {
-        val spotify = SpotifySourceManager(
-            lavaplayerConfig.sources.spotify.clientId,
-            lavaplayerConfig.sources.spotify.clientSecret,
-            lavaplayerConfig.sources.spotify.spDc,
-            lavaplayerConfig.sources.spotify.countryCode,
-            Function { audioPlayerManager },
-            DefaultMirroringAudioTrackResolver(lavaplayerConfig.providers.toTypedArray()),
-        )
+        /*
+            val spotify = SpotifySourceManager(
+                lavaplayerConfig.sources.spotify.clientId,
+                lavaplayerConfig.sources.spotify.clientSecret,
+                lavaplayerConfig.sources.spotify.spDc,
+                lavaplayerConfig.sources.spotify.countryCode,
+                Function { audioPlayerManager },
+                DefaultMirroringAudioTrackResolver(lavaplayerConfig.providers.toTypedArray()),
+            )
+        */
 
         val deezer = DeezerAudioSourceManager(
             lavaplayerConfig.sources.deezer.masterDecryptionKey,
@@ -61,7 +63,7 @@ class PlayerManager(private val lavaplayerConfig: LavaplayerConfig) {
 
         /* Register external sources */
         audioPlayerManager.registerSourceManager(youtube)
-        audioPlayerManager.registerSourceManager(spotify)
+//        audioPlayerManager.registerSourceManager(spotify)
         audioPlayerManager.registerSourceManager(deezer)
         audioPlayerManager.registerSourceManager(soundcloud)
         audioPlayerManager.registerSourceManager(http)

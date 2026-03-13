@@ -21,7 +21,9 @@ java {
 repositories {
 	mavenCentral()
 	maven(url = "https://maven.lavalink.dev/releases")
+	maven(url = "https://maven.lavalink.dev/snapshots")
 	maven(url ="https://maven.topi.wtf/releases")
+	maven(url = "https://maven.topi.wtf/snapshots")
 }
 
 extra["springGrpcVersion"] = "1.0.1"
@@ -39,8 +41,8 @@ dependencies {
 
 	implementation("dev.arbjerg:lavaplayer:2.2.6")
 	implementation("dev.lavalink.youtube:v2:1.17.0")
-	implementation("com.github.topi314.lavasrc:lavasrc:4.8.1")
-	implementation("com.github.topi314.lavasrc:lavasrc-protocol:4.8.1")
+	implementation("com.github.topi314.lavasrc:lavasrc:e43da05")
+	implementation("com.github.topi314.lavasrc:lavasrc-protocol:e43da05")
 	implementation("com.github.topi314.lavasearch:lavasearch:1.0.0")
 
 	implementation("org.springframework.boot:spring-boot-starter-graphql")

@@ -3,6 +3,8 @@ package dev.bachtran.lavaradio.lavaplayer.manager
 import com.github.topi314.lavasearch.SearchManager
 import com.github.topi314.lavasearch.result.AudioSearchResult
 import com.github.topi314.lavasrc.deezer.DeezerAudioPlaylist
+import com.github.topi314.lavasrc.deezer.DeezerAudioSourceManager
+import com.github.topi314.lavasrc.deezer.DeezerAudioTrack.TrackFormat
 import com.github.topi314.lavasrc.spotify.SpotifyAudioPlaylist
 import com.github.topi314.lavasrc.spotify.SpotifySourceManager
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
@@ -24,7 +26,7 @@ class SearchManager(
 
     init {
 
-        /* Set up Spotify as extra search source */
+        /*
         val spotify = SpotifySourceManager(
             lavaplayerConfig.sources.spotify.clientId,
             lavaplayerConfig.sources.spotify.clientSecret,
@@ -33,7 +35,15 @@ class SearchManager(
             null,
             null
         )
-        searchManager.registerSearchManager(spotify)
+        */
+
+        val deezer = DeezerAudioSourceManager(
+            lavaplayerConfig.sources.deezer.masterDecryptionKey,
+            lavaplayerConfig.sources.deezer.arl,
+            arrayOf(TrackFormat.MP3_128, TrackFormat.MP3_64)
+        )
+
+        searchManager.registerSearchManager(deezer)
     }
 
     fun searchQuery(query: String, source: String, types: String): List<SearchResultItem>? {
@@ -54,7 +64,11 @@ class SearchManager(
             val types = types.lowercase()
 
             when (source) {
-                "spotify" -> {
+                "deezer" -> {
+                    val searchPrefix = when (source) {
+                        "deezer"-> "dzsearch"
+                        else -> throw InvalidSourceException(source)    /* should never reach here */
+                    }
                     val searchType = when (types) {
                         "album" -> AudioSearchResult.Type.ALBUM
                         "artist" -> AudioSearchResult.Type.ARTIST
@@ -62,7 +76,7 @@ class SearchManager(
                         else -> AudioSearchResult.Type.TRACK
                     }
                     val searchResult = searchManager.loadSearch(
-                        "spsearch:$query", mutableSetOf(searchType)
+                        "$searchPrefix:$query", mutableSetOf(searchType)
                     )
 
                     if (searchResult != null) {
