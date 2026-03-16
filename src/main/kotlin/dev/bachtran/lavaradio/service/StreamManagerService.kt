@@ -79,6 +79,10 @@ class StreamManagerService (
         return execute(streamId, currentUserId) { session -> block(session.getRadioService()) }
     }
 
+    fun getUserStreamId(userId: String): String {
+        return userToStreamMap[userId] ?: throw StreamNotFoundException(userId)
+    }
+
     fun getStreamState(streamId: String): StreamState {
         val session = activeSessions[streamId] ?: return StreamState(streamId, existed = false, active = false)
         return StreamState(streamId, existed = true, active = session.isActive())
